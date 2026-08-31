@@ -47,6 +47,25 @@
   }
   @keyframes pulse { 0%,100%{ box-shadow:0 0 0 0 rgba(255,59,92,.6);} 50%{ box-shadow:0 0 0 7px rgba(255,59,92,0);} }
 
+  .btn-refresh {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 38px; height: 38px; border-radius: 50%;
+    border: 1px solid rgba(120,170,245,.4);
+    background: rgba(22,119,255,.15); color: #9be7ff;
+    cursor: pointer; font-size: 17px; line-height: 1;
+    transition: transform .15s, box-shadow .2s;
+  }
+  .btn-refresh:hover:not(:disabled) { background: rgba(22,119,255,.28); box-shadow: 0 0 14px rgba(22,119,255,.4); }
+  .btn-refresh:active { transform: scale(.92); }
+  .btn-refresh:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-refresh .spin-sm {
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid rgba(155,231,255,.3); border-top-color: #9be7ff;
+    animation: spin .8s linear infinite; display: none;
+  }
+  .btn-refresh.loading .spin-sm { display: inline-block; }
+  .btn-refresh.loading .ico { display: none; }
+
   .player {
     position: relative; width: 100%; aspect-ratio: 16/9;
     background: #000; border-radius: 14px; overflow: hidden;
@@ -83,6 +102,7 @@
   <div class="brand">
     <h1>LB2</h1>
     <span class="badge"><span class="dot"></span> LIVE</span>
+    <button class="btn-refresh" id="btn-refresh" aria-label="Refresh stream token" title="Refresh stream token"><span class="ico">🗘</span><span class="spin-sm"></span></button>
   </div>
 
   <div class="player">
@@ -108,9 +128,10 @@
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
 <script>
   // Fresh signed LB2 master playlist URL (media host allows CORS *, no referer).
-  var DEFAULT_URL = "https://games1.elahmad.store/tv13_www_elahmad._lb2/index.m3u8?token=37beea87a3972535373032beef52fd52a047720a-3f7114e9fa3a7c97e78262134d157836-1788214321-1788212521";
+  var DEFAULT_URL = "https://games1.elahmad.store/tv13_www_elahmad._lb2/index.m3u8?token=217c7781a482220c3e49a177d0f2b6b5ec3fdeca-ea0b2363060dce7f44d432d65b3fed0e-1788214793-1788212993";
 
   var vid = document.getElementById('vid');
+  var btn = document.getElementById('btn-refresh');
   var errSub = document.getElementById('err-sub');
   var ovlLoading = document.getElementById('ovl-loading');
   var ovlTap = document.getElementById('ovl-tap');
@@ -186,6 +207,33 @@
     overlays('loading');
     var p = vid.play();
     if (p) p.catch(function(){});
+  });
+
+  function isPlayableM3u8(url) {
+    return fetch(url, { method: 'GET' }).then(function(res){
+      if (!res.ok) return false;
+      return res.text().then(function(t){ return t.trim().indexOf('#EXTM3U') === 0; });
+    }).catch(function(){ return false; });
+  }
+
+  // Refresh: try to mint a fresh token, but only use it if it verifies as a
+  // real playable playlist. Otherwise keep playing the embedded stream.
+  btn.addEventListener('click', async function(){
+    btn.disabled = true; btn.classList.add('loading');
+    overlays('loading');
+    try {
+      var res = await fetch('/api/token');
+      var data = res.ok ? await res.json() : null;
+      if (data && data.url && await isPlayableM3u8(data.url)) {
+        play(data.url);
+      } else {
+        play(DEFAULT_URL);
+      }
+    } catch (e) {
+      play(DEFAULT_URL);
+    } finally {
+      btn.disabled = false; btn.classList.remove('loading');
+    }
   });
 
   // Autoplay to start (will show tap overlay if blocked).

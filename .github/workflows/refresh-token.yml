@@ -1,9 +1,10 @@
 name: Auto-refresh LB2 token
 
 on:
-  schedule:
-    # LB2 tokens last ~30 min; refresh well before expiry.
-    - cron: "*/20 * * * *"
+  # Auto-refresh DISABLED: GitHub-hosted runners mint tokens from datacenter
+  # IPs that elahmad.ru rejects with HTTP 403 for real users (browser sessions),
+  # so every scheduled commit shipped a dead token and broke playback.
+  # Keep manual dispatch available in case a non-datacenter mint is added later.
   workflow_dispatch:
 
 concurrency:
