@@ -123,6 +123,35 @@ async function loadStream(ch) {
 }
 
 /* ============================================================
+   Regenerate token — pull a fresh signed URL from the encrypted
+   server (/api/token) and immediately reload the player.
+   ============================================================ */
+async function regenerateToken() {
+  const btn = $("#btn-regen");
+  btn.disabled = true;
+  btn.classList.add("is-loading");
+  ovl.loading.hidden = false;
+  statusEl.textContent = "Regenerating token…";
+  try {
+    const url = await getChannelUrl("lb2");
+    state.lastUrl = url;
+    $("#stream-input").value = url;
+    player.retry(url);
+    statusEl.textContent = "● Live";
+    frame.classList.add("is-live");
+  } catch (err) {
+    errSub.textContent = err.message || "Could not regenerate the token.";
+    for (const k in ovl) ovl[k].hidden = true;
+    ovl.error.hidden = false;
+    statusEl.textContent = "Unavailable";
+    frame.classList.remove("is-live");
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove("is-loading");
+  }
+}
+
+/* ============================================================
    Channels carousel
    ============================================================ */
 function renderChannels() {
@@ -216,6 +245,10 @@ $("#btn-retry").addEventListener("click", () => {
 
 $("#btn-regenerate").addEventListener("click", () => {
   setChannel(channels.find((c) => c.id === state.currentId));
+});
+
+$("#btn-regen").addEventListener("click", () => {
+  regenerateToken();
 });
 
 $("#btn-fs").addEventListener("click", () => player.toggleFullscreen());
