@@ -2,846 +2,159 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LB2 Live TV — Full Stream Analysis Report</title>
-<style>
-  :root {
-    --bg: #0d1117;
-    --bg-2: #161b22;
-    --bg-3: #1f2630;
-    --border: #30363d;
-    --text: #e6edf3;
-    --muted: #8b949e;
-    --accent: #4ac29a;
-    --accent-2: #bdfff0;
-    --red: #f85149;
-    --orange: #d29922;
-    --blue: #58a6ff;
-    --green: #3fb950;
-    --code-bg: #0d1117;
-    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-  }
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    line-height: 1.65;
-    padding: 0;
-  }
-
-  .container { max-width: 980px; margin: 0 auto; padding: 0 24px; }
-
-  /* === Header / Hero === */
-  header.hero {
-    background: linear-gradient(135deg, #0d1b2a 0%, #1b263b 55%, #04140e 100%);
-    border-bottom: 1px solid var(--border);
-    padding: 56px 0 40px;
-    position: relative;
-    overflow: hidden;
-  }
-  header.hero::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(600px 200px at 80% 10%, rgba(74,194,154,0.12), transparent 70%);
-    pointer-events: none;
-  }
-  .hero .container { position: relative; z-index: 1; }
-  .live-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(63,185,80,0.15);
-    border: 1px solid rgba(63,185,80,0.4);
-    color: var(--green);
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    padding: 5px 12px;
-    border-radius: 999px;
-    margin-bottom: 18px;
-    text-transform: uppercase;
-  }
-  .live-badge .dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--green);
-    animation: pulse 1.6s infinite;
-  }
-  @keyframes pulse {
-    0%,100% { box-shadow: 0 0 0 0 rgba(63,185,80,0.5); }
-    50%     { box-shadow: 0 0 0 6px rgba(63,185,80,0); }
-  }
-  header.hero h1 {
-    font-size: 34px;
-    font-weight: 800;
-    letter-spacing: -0.5px;
-    margin-bottom: 10px;
-  }
-  header.hero h1 .lb {
-    color: var(--accent-2);
-  }
-  header.hero p.sub {
-    color: var(--muted);
-    font-size: 16px;
-    max-width: 700px;
-  }
-  .hero-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-top: 24px;
-  }
-  .chip {
-    background: var(--bg-2);
-    border: 1px solid var(--border);
-    color: var(--muted);
-    font-size: 13px;
-    padding: 6px 14px;
-    border-radius: 8px;
-    font-family: var(--mono);
-  }
-  .chip b { color: var(--text); font-weight: 600; }
-
-  /* === Layout sections === */
-  main { padding: 40px 0 64px; }
-  section { margin-bottom: 44px; }
-  section h2 {
-    font-size: 20px;
-    font-weight: 700;
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  section h2 .num {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 26px; height: 26px;
-    background: var(--bg-3);
-    border: 1px solid var(--border);
-    border-radius: 7px;
-    font-size: 13px;
-    color: var(--accent-2);
-    font-family: var(--mono);
-    flex-shrink: 0;
-  }
-
-  /* === Cards / grids === */
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
-  .card {
-    background: var(--bg-2);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 16px 18px;
-  }
-  .card .label {
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    color: var(--muted);
-    margin-bottom: 6px;
-  }
-  .card .value { font-size: 15px; font-weight: 600; word-break: break-word; }
-  .card .value.small { font-size: 13px; font-weight: 500; font-family: var(--mono); }
-
-  /* === Code blocks === */
-  pre {
-    background: var(--code-bg);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 16px 18px;
-    overflow-x: auto;
-    font-family: var(--mono);
-    font-size: 13px;
-    line-height: 1.6;
-    color: #c9d1d9;
-    margin: 14px 0;
-    white-space: pre;
-  }
-  pre .cmt { color: #8b949e; }
-  pre .str { color: #a5d6ff; }
-  pre .key { color: #79c0ff; }
-  pre .tok  { color: #d29922; }
-  code.inline {
-    background: var(--bg-3);
-    border: 1px solid var(--border);
-    border-radius: 5px;
-    padding: 1px 6px;
-    font-family: var(--mono);
-    font-size: 13px;
-    color: var(--accent-2);
-  }
-  .copy-wrap { position: relative; }
-  .copy-btn {
-    position: absolute;
-    top: 10px; right: 10px;
-    background: var(--bg-3);
-    border: 1px solid var(--border);
-    color: var(--muted);
-    font-size: 12px;
-    padding: 4px 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-family: var(--mono);
-    transition: all .15s;
-  }
-  .copy-btn:hover { color: var(--text); border-color: var(--accent-2); }
-
-  /* === Steps === */
-  .steps { list-style: none; counter-reset: step; }
-  .steps li {
-    counter-increment: step;
-    position: relative;
-    padding: 0 0 22px 52px;
-    margin: 0;
-  }
-  .steps li::before {
-    content: counter(step);
-    position: absolute;
-    left: 0; top: 0;
-    width: 34px; height: 34px;
-    display: flex; align-items: center; justify-content: center;
-    background: var(--bg-3);
-    border: 1px solid var(--border);
-    border-radius: 50%;
-    font-family: var(--mono);
-    font-weight: 700;
-    color: var(--accent-2);
-  }
-  .steps li::after {
-    content: "";
-    position: absolute;
-    left: 16px; top: 34px; bottom: 0;
-    width: 2px;
-    background: var(--bg-3);
-  }
-  .steps li:last-child::after { display: none; }
-  .steps li h3 { font-size: 15px; margin-bottom: 6px; }
-  .steps li p { color: var(--muted); font-size: 14px; margin-bottom: 8px; }
-
-  /* === Tables === */
-  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
-  table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 520px; }
-  thead th {
-    background: var(--bg-3);
-    text-align: left;
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--muted);
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border);
-  }
-  tbody td {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border);
-    vertical-align: top;
-  }
-  tbody tr:last-child td { border-bottom: none; }
-  tbody tr:nth-child(even) { background: rgba(255,255,255,0.02); }
-  tbody td code { background: none; padding: 0; border: none; color: var(--accent-2); }
-
-  /* === Alerts / callouts === */
-  .alert {
-    border-radius: 10px;
-    padding: 14px 18px;
-    margin: 16px 0;
-    border: 1px solid;
-    font-size: 14px;
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
-  }
-  .alert .icon { font-size: 18px; line-height: 1.4; }
-  .alert.warn { background: rgba(210,153,34,0.08); border-color: rgba(210,153,34,0.4); }
-  .alert.warn .icon { color: var(--orange); }
-  .alert.info { background: rgba(88,166,255,0.08); border-color: rgba(88,166,255,0.4); }
-  .alert.info .icon { color: var(--blue); }
-  .alert.good { background: rgba(63,185,80,0.08); border-color: rgba(63,185,80,0.4); }
-  .alert.good .icon { color: var(--green); }
-  .alert b { color: var(--text); }
-
-  /* === Tag pills === */
-  .pill-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-  .pill {
-    font-size: 12px;
-    font-family: var(--mono);
-    padding: 4px 10px;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    background: var(--bg-2);
-    color: var(--muted);
-  }
-  .pill.hls  { color: var(--green);  border-color: rgba(63,185,80,0.4);  background: rgba(63,185,80,0.08); }
-  .pill.h264 { color: var(--blue);   border-color: rgba(88,166,255,0.4);  background: rgba(88,166,255,0.08); }
-  .pill.aac  { color: var(--orange); border-color: rgba(210,153,34,0.4); background: rgba(210,153,34,0.08); }
-  .pill.cf   { color: var(--accent-2); border-color: rgba(74,194,154,0.4); background: rgba(74,194,154,0.08); }
-
-  /* === Live player === */
-  .player-wrap {
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    overflow: hidden;
-    background: #000;
-    position: relative;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-  }
-  .player-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 10px 16px;
-    background: var(--bg-2);
-    border-bottom: 1px solid var(--border);
-  }
-  .player-bar .title {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-weight: 700;
-    font-size: 15px;
-  }
-  .player-bar .status {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    color: var(--muted);
-  }
-  .status-live {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    color: var(--green);
-    font-weight: 700;
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: .5px;
-  }
-  .status-live .smdot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--green);
-    animation: pulse 1.6s infinite;
-  }
-  .player-box {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    background: #000;
-  }
-  .player-box video {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    background: #000;
-  }
-  .no-src, .player-err, .player-loading {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    color: var(--muted);
-    text-align: center;
-    padding: 24px;
-    font-size: 14px;
-  }
-  .player-err { color: var(--red); }
-  .player-loading .spin {
-    width: 34px; height: 34px;
-    border: 3px solid rgba(255,255,255,0.15);
-    border-top-color: var(--accent-2);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(359deg); } }
-  .stream-input {
-    display: flex;
-    gap: 10px;
-    margin-top: 14px;
-  }
-  .stream-input input {
-    flex: 1;
-    background: var(--bg-2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 13px;
-    padding: 10px 14px;
-    outline: none;
-  }
-  .stream-input input:focus { border-color: var(--accent-2); }
-  .stream-input button {
-    background: var(--accent-2);
-    color: #04140e;
-    border: none;
-    border-radius: 8px;
-    font-weight: 700;
-    font-size: 14px;
-    padding: 10px 22px;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-  .stream-input button:hover { filter: brightness(1.1); }
-  .player-foot {
-    font-size: 12px;
-    color: var(--muted);
-    margin-top: 10px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .player-foot code { color: var(--accent-2); }
-
-  /* === Player chips === */
-  .players { display: flex; flex-wrap: wrap; gap: 8px; }
-  .pchip {
-    font-size: 13px;
-    padding: 6px 14px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    background: var(--bg-2);
-    cursor: default;
-  }
-  .pchip.default { border-color: var(--accent-2); color: var(--accent-2); box-shadow: 0 0 0 1px var(--accent-2) inset; }
-  .pchip b { color: var(--text); }
-
-  footer {
-    border-top: 1px solid var(--border);
-    padding: 28px 0 40px;
-    color: var(--muted);
-    font-size: 13px;
-    text-align: center;
-  }
-  footer code { font-family: var(--mono); }
-
-  @media (max-width: 640px) {
-    header.hero h1 { font-size: 26px; }
-    .container { padding: 0 16px; }
-    .steps li { padding-left: 48px; }
-  }
-</style>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#050816">
+<meta name="description" content="NOVA TV — premium live television streaming experience.">
+<title>NOVA TV · Live Television</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/app.css">
 </head>
 <body>
+<div class="app-bg" aria-hidden="true"></div>
 
-<!-- ============ HERO ============ -->
+<div data-nav></div>
+
 <header class="hero">
-  <div class="container">
-    <span class="live-badge"><span class="dot"></span> Live Stream &middot; Verified Online</span>
-    <h1>LBC <span class="lb">LB2</span> — Live TV Stream Report</h1>
-    <p class="sub">
-      Full technical analysis of <b>LBC (LB2)</b>, a Lebanese live TV channel embedded via
-      <code class="inline">elahmad.ru</code>. This report covers the player used, the underlying
-      HLS source, the multi-layer URL protection scheme, and how to extract &amp; stream the feed yourself.
-    </p>
-    <div class="hero-meta">
-      <span class="chip">Channel: <b>LB2 / LBC</b></span>
-      <span class="chip">Type: <b>Live TV</b></span>
-      <span class="chip">Region: <b>Lebanon / Arabic</b></span>
-      <span class="chip">Status: <b style="color:#3fb950">ONLINE</b></span>
+  <div class="container hero-inner">
+    <span class="hero-eyebrow rise">✶ Premium Live Television</span>
+    <h1 class="rise rise-1">Watch live, the way it should be.</h1>
+    <p class="hero-sub rise rise-2">A cinematic, glossy experience for streaming live channels — beautiful surfaces, resilient playback, and a guide that always shows what's on now.</p>
+    <div class="hero-cta rise rise-3" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px">
+      <a class="btn btn-primary" href="#player">▶ Watch now</a>
+      <a class="btn btn-ghost" href="#guide">TV Guide</a>
     </div>
   </div>
 </header>
 
 <main class="container">
 
-  <!-- ============ LIVE PLAYER ============ -->
-  <section>
-    <h2><span class="num">&#9654;</span> Live Player</h2>
+  <!-- ============ LIVESTREAM PLAYER ============ -->
+  <section class="player-section section" id="player" aria-label="Live player">
+    <div class="section-head">
+      <h2><span class="bar" aria-hidden="true"></span> Live Now</h2>
+      <span class="guide-status" id="player-status" role="status" aria-live="polite"></span>
+    </div>
 
-    <div class="player-wrap">
-      <div class="player-bar">
-        <div class="title">
-          <span class="live-badge" style="margin:0"><span></span> LIVE</span>
-          <span>LBC &middot; LB2</span>
+    <div class="player-shell rise">
+      <div class="player-frame" id="frame">
+        <video id="video" controls playsinline aria-label="Live video player"></video>
+
+        <!-- Loading -->
+        <div class="player-overlay" id="ovl-loading" hidden>
+          <div class="spinner" aria-hidden="true"></div>
+          <div class="ovl-title">Connecting to live stream</div>
+          <div class="ovl-sub">Fetching a fresh channel signal…</div>
         </div>
-        <div class="status" id="player-status-label">
-          <span class="status-live"><span class="smdot"></span> Loading stream&hellip;</span>
+
+        <!-- Needs interaction (autoplay blocked — never bypass) -->
+        <div class="player-overlay" id="ovl-interact" hidden>
+          <div class="ovl-title">Tap to start playback</div>
+          <div class="ovl-sub">Your browser requires a tap to play audio and video.</div>
+        </div>
+
+        <!-- Reconnecting -->
+        <div class="player-overlay" id="ovl-reconnect" hidden>
+          <div class="reconnect-pill"><span class="spinner" aria-hidden="true" style="width:22px;height:22px"></span> Reconnecting…</div>
+          <div class="ovl-sub">Lost the live signal. Restoring your stream.</div>
+        </div>
+
+        <!-- Error -->
+        <div class="player-overlay err" id="ovl-error" hidden>
+          <div class="ovl-title">This channel is temporarily unavailable.</div>
+          <div class="ovl-sub" id="ovl-error-sub">The live signal could not be loaded.</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+            <button class="btn btn-primary" id="btn-retry">Try again</button>
+            <button class="btn btn-ghost" id="btn-regenerate">Generate fresh link</button>
+          </div>
+        </div>
+
+        <!-- Player chrome -->
+        <div class="player-chrome" id="chrome">
+          <div class="chrome-left">
+            <span class="live-badge"><span class="dot"></span> LIVE</span>
+            <span id="chrome-title">—</span>
+          </div>
+          <div class="chrome-right">
+            <button class="icon-btn" id="btn-pip" title="Picture-in-picture" aria-label="Picture-in-picture">⧉</button>
+            <button class="icon-btn" id="btn-fs" title="Fullscreen" aria-label="Fullscreen">⛶</button>
+          </div>
         </div>
       </div>
-      <div class="player-box">
-        <video id="live-video" controls playsinline></video>
-        <div class="player-loading" id="player-loading">
-          <div class="spin"></div>
-          <span>Connecting to live stream&hellip;</span>
+
+      <div class="player-info">
+        <div class="who">
+          <span class="channel-avatar" id="info-avatar" style="--chip-color:#1677ff">L2</span>
+          <div>
+            <h2 id="info-name">LBC 2</h2>
+            <div class="category" id="info-category">News &amp; Entertainment</div>
+          </div>
         </div>
-        <div class="no-src" id="player-nosrc" style="display:none">
-          <span>No active stream URL.</span>
-          <span style="font-size:13px">Enter a fresh <code>.m3u8</code> URL below and press <b>Play</b>.</span>
+        <div style="min-width:0;max-width:520px">
+          <p class="tagline" id="info-tagline">Lebanese news, shows and entertainment live.</p>
+          <div class="category" id="info-now">—</div>
         </div>
-        <div class="player-err" id="player-err" style="display:none">
-          <span>&#9888; Failed to load the stream.</span>
-          <span style="font-size:13px">The token may have expired. Get a fresh URL and retry.</span>
+        <div class="info-actions">
+          <a class="btn btn-ghost" id="btn-share" href="#" role="button" aria-label="Share this channel">♡ Share</a>
+        </div>
+      </div>
+
+      <div class="stream-panel">
+        <div class="stream-row">
+          <input id="stream-input" type="text" spellcheck="false" aria-label="Stream URL" placeholder="Paste a fresh .m3u8 URL, or generate one…" />
+          <button class="btn btn-ghost" id="btn-play-url">Play URL</button>
+        </div>
+        <div style="font-size:0.8rem;color:var(--text-faint);margin-top:10px">
+          Stream tokens expire after ~30 minutes. Use <b>Generate fresh link</b> to pull a new signal automatically.
         </div>
       </div>
     </div>
 
-    <div class="stream-input">
-      <input id="stream-input" type="text" spellcheck="false" placeholder="Paste a fresh .m3u8 stream URL here&hellip;" />
-      <button id="play-btn" type="button">Play</button>
-    </div>
-
-    <div class="player-foot">
-      <span>&#9432; The embedded URL token below is time-limited and may have expired.</span>
-      <span>Paste a fresh URL using <a href="#srcrecipe" style="color:var(--accent-2)">Section 05</a> to replay.</span>
-    </div>
-  </section>
-
-  <!-- ============ 1. STREAM SOURCE ============ -->
-  <section>
-    <h2><span class="num">01</span> Stream Source</h2>
-    <p>The channel is delivered as an <b>HLS</b> stream from a Cloudflare-fronted media server.</p>
-
-    <div class="copy-wrap">
-      <button class="copy-btn" data-copy="stream-url">Copy URL</button>
-      <pre id="stream-url">https://games1.elahmad.store/tv13_www_elahmad._lb2/index.m3u8?token=7a4d43792b008bff71b40eac190ae4f0ce1d7f91-afbd1f21eedaf1f8ceef8c75771ed4e4-1788192661-1788190861</pre>
-    </div>
-
-    <div class="alert warn">
-      <span class="icon">&#9888;&#65039;</span>
-      <div>
-        <b>This token is time-limited (~30 minutes).</b> Do not rely on the URL above — it will expire.
-        To obtain a fresh, working URL at any time, follow the <b>extraction recipe</b> in section 04.
+    <div class="nownext">
+      <div class="nn-card progress">
+        <div class="nn-label"><span class="live-badge"><span class="dot"></span> On now</span></div>
+        <h3 id="nn-now-title">—</h3>
+        <div class="nn-time" id="nn-now-time">—</div>
+        <div class="progress-track" aria-hidden="true"><div class="progress-fill" id="nn-now-progress"></div></div>
       </div>
-    </div>
-
-    <div class="pill-group">
-      <span class="pill hls">HLS / .m3u8</span>
-      <span class="pill h264">H.264 / AVC</span>
-      <span class="pill aac">AAC Audio</span>
-      <span class="pill cf">Cloudflare CDN</span>
-    </div>
-  </section>
-
-  <!-- ============ 2. PLAYER ANALYSIS ============ -->
-  <section>
-    <h2><span class="num">02</span> Player Analysis</h2>
-    <p>
-      The page embeds a switchable multi-player. The <b>default</b> is the commercial
-      <b>RadiantMP</b> HTML5 player. Several alternative players can be selected via the
-      in-page player dropdown.
-    </p>
-
-    <div class="players">
-      <span class="pchip default"><b>Radian (RadiantMP)</b> &mdash; default</span>
-      <span class="pchip">VideoJS</span>
-      <span class="pchip">Clappr</span>
-      <span class="pchip">TheoPlayer</span>
-      <span class="pchip">JW Player 8</span>
-      <span class="pchip">Plyr</span>
-      <span class="pchip">Bitmovin</span>
-      <span class="pchip">Shaka</span>
-      <span class="pchip">SLDP</span>
-    </div>
-
-    <div class="alert info" style="margin-top:18px">
-      <span class="icon">&#9432;</span>
-      <div>
-        You do <b>not</b> need any of these embeds to watch. Since the source is plain HLS,
-        the decrypted <code class="inline">.m3u8</code> URL plays directly in any HLS-capable app
-        (VLC, mpv, ffplay, browser <code class="inline">&lt;video&gt;</code>).
+      <div class="nn-card">
+        <div class="nn-label">Up next</div>
+        <h3 id="nn-next-title">—</h3>
+        <div class="nn-time" id="nn-next-time">—</div>
       </div>
     </div>
   </section>
 
-  <!-- ============ 3. STREAM SPECS ============ -->
-  <section>
-    <h2><span class="num">03</span> Stream Specification</h2>
-    <div class="grid">
-      <div class="card"><div class="label">Container</div><div class="value">HLS (m3u8) / MPEG-TS</div></div>
-      <div class="card"><div class="label">Video Codec</div><div class="value">H.264 (avc1.640029)</div></div>
-      <div class="card"><div class="label">Audio Codec</div><div class="value">AAC (mp4a.40.2)</div></div>
-      <div class="card"><div class="label">Resolution</div><div class="value">1024 &times; 576</div></div>
-      <div class="card"><div class="label">Frame Rate</div><div class="value">25 fps</div></div>
-      <div class="card"><div class="label">Bandwidth</div><div class="value">~1.45 Mbps</div></div>
-      <div class="card"><div class="label">Segment Duration</div><div class="value">2 &ndash; 6 s</div></div>
-      <div class="card"><div class="label">Media Server</div><div class="value small">games1.elahmad.store</div></div>
+  <!-- ============ CHANNELS ============ -->
+  <section class="channels section" id="channels" aria-label="Channels">
+    <div class="section-head">
+      <h2><span class="bar" aria-hidden="true"></span> Channels</h2>
+      <a class="more" href="#player">Watch &rarr;</a>
     </div>
-
-    <h3 style="margin:26px 0 10px; font-size:15px">Master Playlist</h3>
-    <pre><span class="cmt"># Top-level playlist pointing to a single rendition</span>
-#EXTM3U
-#EXT-X-STREAM-INF:<span class="tok">AVERAGE-BANDWIDTH=1160000</span>,<span class="tok">BANDWIDTH=1450000</span>,
-  <span class="tok">RESOLUTION=1024x576</span>,<span class="tok">FRAME-RATE=25.000</span>,
-  <span class="tok">CODECS="avc1.640029,mp4a.40.2"</span>
-tracks-v1a1/mono.m3u8?token=...</pre>
-
-    <h3 style="margin:26px 0 10px; font-size:15px">Media Playlist (segments)</h3>
-    <pre><span class="cmt"># Live, rolling TS segments with token appended to each</span>
-#EXTM3U
-#EXT-X-TARGETDURATION:6
-#EXT-X-VERSION:3
-#EXT-X-MEDIA-SEQUENCE:360282
-#EXT-X-PROGRAM-DATE-TIME:2026-08-31T14:00:44Z
-#EXTINF:6.000,
-2026/08/31/14/00/44-06000.ts?token=...
-#EXTINF:2.000,
-2026/08/31/14/00/50-02000.ts?token=...</pre>
+    <div class="carousel" id="carousel" tabindex="0" aria-label="Channel list"></div>
   </section>
 
-  <!-- ============ 4. HOW THE URL IS PROTECTED ============ -->
-  <section>
-    <h2><span class="num">04</span> URL Protection Scheme</h2>
-    <p>The stream URL is protected by <b>two layers</b> plus several anti-abuse measures:</p>
-
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr><th>Layer</th><th>Mechanism</th><th>Purpose</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>1 &mdash; Encryption</td>
-            <td><code>AES-256-CBC</code> + <code>PKCS#7</code> padding</td>
-            <td>Obscures the raw URL until decrypted client-side via crypto-js</td>
-          </tr>
-          <tr>
-            <td>2 &mdash; Token</td>
-            <td><code>token=...</code> query param on every .m3u8/.ts request</td>
-            <td>Time-limited (~30 min); must refresh by re-running the extraction</td>
-          </tr>
-          <tr>
-            <td>3 &mdash; CSRF</td>
-            <td><code>csrf_token</code> required in the POST body</td>
-            <td>Must extract from the <code>&lt;meta name="csrf-token"&gt;</code> tag</td>
-          </tr>
-          <tr>
-            <td>4 &mdash; Referrer</td>
-            <td>Checks the <code>Referer</code> header (<code>elahmad.ru</code>)</td>
-            <td>Only allows requests that appear to come from the site</td>
-          </tr>
-          <tr>
-            <td>5 &mdash; Ad-block guard</td>
-            <td>Injects <code>ads.vidoomy.com</code> SDK; shows overlay if blocked</td>
-            <td>Anti ad-blocker / monetisation</td>
-          </tr>
-        </tbody>
-      </table>
+  <!-- ============ TV GUIDE ============ -->
+  <section class="guide section" id="guide" aria-label="TV Guide">
+    <div class="section-head">
+      <h2><span class="bar" aria-hidden="true"></span> What's On</h2>
+      <span class="guide-status" id="guide-status">Loading program information…</span>
     </div>
-
-    <div class="alert info" style="margin-top:18px">
-      <span class="icon">&#9432;</span>
-      <div>
-        The client-side decrypt (<code class="inline">my_crypt_new</code>) uses
-        <b>AES-256-CBC</b> with a 32-byte hex key and 16-byte hex IV, Base64 ciphertext,
-        and PKCS#7 padding — the same scheme we replicate in the recipe below.
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ 5. EXTRACTION RECIPE ============ -->
-  <section>
-    <h2 id="srcrecipe"><span class="num">05</span> How to Extract a Fresh URL</h2>
-    <p>Replicate this <b>4-step recipe</b> whenever you need a fresh, non-expired stream URL:</p>
-
-    <ol class="steps">
-      <li>
-        <h3>Get the page &amp; CSRF token</h3>
-        <p>
-          <code class="inline">GET https://www.elahmad.ru/tv/mobiletv/glarb.php?id=lb2</code>.<br>
-          Read the <code class="inline">content</code> of the
-          <code class="inline">&lt;meta name="csrf-token"&gt;</code> tag.
-        </p>
-      </li>
-      <li>
-        <h3>POST to the result endpoint</h3>
-        <pre>POST https://www.elahmad.ru/tv/result/embed_result_elahmad_81.php
-Content-Type: application/x-www-form-urlencoded
-Referer: https://www.elahmad.ru/
-User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) ...
-
-id=lb2&amp;csrf_token=&lt;token-from-step-1&gt;</pre>
-      </li>
-      <li>
-        <h3>Parse the JSON response</h3>
-        <pre>{
-  <span class="key">"link_4"</span>: <span class="str">"&lt;base64 ciphertext&gt;"</span>,
-  <span class="key">"key"</span>:    <span class="str">"&lt;32-byte hex key&gt;"</span>,
-  <span class="key">"iv"</span>:     <span class="str">"&lt;16-byte hex iv&gt;"</span>
-}</pre>
-      </li>
-      <li>
-        <h3>Decrypt with AES-256-CBC / PKCS#7</h3>
-        <pre>ciphertext = base64decode(<span class="str">link_4</span>)
-key        = bytes.fromhex(<span class="str">key</span>)     <span class="cmt"># 32 bytes -> AES-256</span>
-iv         = bytes.fromhex(<span class="str">iv</span>)      <span class="cmt"># 16 bytes</span>
-<span class="str">plaintext</span>  = AES_CBC_decrypt(ciphertext, key, iv)
-url        = unpad_pkcs7(<span class="str">plaintext</span>)</pre>
-      </li>
-    </ol>
-
-    <div class="alert good">
-      <span class="icon">&#10003;</span>
-      <div>
-        The output is your fresh <code class="inline">.m3u8</code> stream URL — ready to play.
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ 6. STREAM / VIEW ============ -->
-  <section>
-    <h2><span class="num">06</span> How to Stream / View It</h2>
-    <p>Drop the decrypted <code class="inline">.m3u8</code> URL into any HLS-capable player:</p>
-
-    <h3 style="margin:22px 0 10px; font-size:15px">Option A &mdash; VLC</h3>
-    <pre>Media &gt; Open Network Stream  &rarr;  paste the .m3u8 URL  &rarr;  Play</pre>
-
-    <h3 style="margin:22px 0 10px; font-size:15px">Option B &mdash; mpv</h3>
-    <pre>mpv <span class="str">"&lt;m3u8-url&gt;"</span></pre>
-
-    <h3 style="margin:22px 0 10px; font-size:15px">Option C &mdash; ffplay (with referer header)</h3>
-    <pre>ffplay -referer <span class="str">"https://www.elahmad.ru/"</span> -i <span class="str">"&lt;m3u8-url&gt;"</span></pre>
-
-    <h3 style="margin:22px 0 10px; font-size:15px">Option D &mdash; Record to file (ffmpeg)</h3>
-    <pre class="copy-wrap">
-      <button class="copy-btn" data-copy="rec-cmd">Copy</button>
-ffmpeg -referer <span class="str">"https://www.elahmad.ru/"</span> -i <span class="str">"&lt;m3u8-url&gt;"</span> -c copy /tmp/lb2-tv.ts
-    </pre>
-  </section>
-
-  <!-- ============ 7. SUMMARY ============ -->
-  <section>
-    <h2><span class="num">07</span> Executive Summary</h2>
-    <div class="card">
-      <p style="font-size:14px; color:var(--muted)">
-        <b style="color:var(--text)">LBC (LB2)</b> is a Lebanese live TV channel served as
-        <b style="color:var(--text)">HLS</b> (1024&times;576, H.264 + AAC) from
-        <code style="color:var(--accent-2)">games1.elahmad.store</code> through
-        <b style="color:var(--text)">Cloudflare</b>. The embedding site uses
-        <b style="color:var(--text)">RadiantMP</b> as its default player. The stream URL is protected
-        by <b style="color:var(--text)">AES-256-CBC encryption</b> plus a
-        <b style="color:var(--text)">time-limited token</b>. No special player is needed — simply
-        decrypt the URL (section 05) and play it in VLC / mpv / ffplay / ffmpeg.
-      </p>
+    <div class="guide-grid" id="guide-grid">
+      <div class="guide-empty">Program information isn't available right now.</div>
     </div>
   </section>
 
 </main>
 
-<footer>
-  <div class="container">
-    Report generated from <code class="inline">https://www.elahmad.ru/tv/mobiletv/glarb.php?id=lb2</code><br>
-    Stream tokens expire ~30 min — re-run the extraction recipe for fresh links.
-  </div>
+<footer class="site-footer">
+  <div>NOVA <b>TV</b> — premium live television preview.</div>
+  <div style="margin-top:8px">Live playback via <code>hls.js</code> · Fresh signals via the bundled <code>/api/token</code> edge function.</div>
 </footer>
 
-<script>
-  document.querySelectorAll('.copy-btn').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      var target = document.getElementById(btn.getAttribute('data-copy'));
-      if(!target) return;
-      var text = target.textContent.replace(/\s+\n/g,'\n').trim();
-      // clean the inline pre (the record one has extra indent)
-      text = text.split('\n').map(function(l){ return l.trimStart(); }).join('\n');
-      navigator.clipboard.writeText(text).then(function(){
-        var old = btn.textContent;
-        btn.textContent = 'Copied!';
-        setTimeout(function(){ btn.textContent = old; }, 1400);
-      });
-    });
-  });
-</script>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
-<script>
-  var DEFAULT_SRC = "https://games1.elahmad.store/tv13_www_elahmad._lb2/index.m3u8?token=7a4d43792b008bff71b40eac190ae4f0ce1d7f91-afbd1f21eedaf1f8ceef8c75771ed4e4-1788192661-1788190861";
-
-  var video = document.getElementById('live-video');
-  var input = document.getElementById('stream-input');
-  var playBtn = document.getElementById('play-btn');
-  var loading = document.getElementById('player-loading');
-  var nosrc = document.getElementById('player-nosrc');
-  var errBox = document.getElementById('player-err');
-  var statusLabel = document.getElementById('player-status-label');
-  var hls = null;
-
-  function setStatus(html) { statusLabel.innerHTML = html; }
-  function setLoading() {
-    loading.style.display = 'flex';
-    nosrc.style.display = 'none';
-    errBox.style.display = 'none';
-    setStatus('<span class="status-live"><span class="smdot"></span> Connecting&hellip;</span>');
-  }
-  function setLive() {
-    loading.style.display = 'none';
-    nosrc.style.display = 'none';
-    errBox.style.display = 'none';
-    setStatus('<span class="status-live"><span class="smdot"></span> LIVE</span>');
-  }
-  function setNoSrc() {
-    loading.style.display = 'none';
-    nosrc.style.display = 'flex';
-    errBox.style.display = 'none';
-    setStatus('<span style="color:var(--muted)">No source</span>');
-  }
-  function setErr() {
-    loading.style.display = 'none';
-    nosrc.style.display = 'none';
-    errBox.style.display = 'flex';
-    setStatus('<span style="color:var(--red)">Error</span>');
-  }
-
-  function destroyPlayer() {
-    if (hls) { try { hls.destroy(); } catch(e){} hls = null; }
-    video.removeAttribute('src');
-    video.pause();
-  }
-
-  function playStream(url) {
-    if (!url) { setNoSrc(); return; }
-    destroyPlayer();
-    setLoading();
-
-    if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      // Safari / native HLS
-      video.src = url;
-      video.addEventListener('loadedmetadata', setLive);
-      video.addEventListener('error', setErr);
-      video.play().catch(function(){ video.muted = false; video.play().catch(setErr); });
-    } else if (window.Hls && Hls.isSupported()) {
-      hls = new Hls({ liveSyncDurationCount: 3, maxBufferLength: 30 });
-      hls.loadSource(url);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, function(){ setLive(); video.play().catch(function(){ video.muted=false; video.play(); }); });
-      hls.on(Hls.Events.ERROR, function(evt, data){
-        if (data.fatal) {
-          if (data.type === Hls.ErrorTypes.NETWORK_ERROR) { hls.startLoad(); }
-          else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) { hls.recoverMediaError(); }
-          else { setErr(); }
-        }
-      });
-    } else {
-      video.src = url; // fallback
-      video.addEventListener('loadedmetadata', setLive);
-      video.addEventListener('error', setErr);
-      video.play().catch(setErr);
-    }
-  }
-
-  function start() {
-    var url = (input.value && input.value.trim()) ? input.value.trim() : DEFAULT_SRC;
-    if (input.value !== url) input.value = url;
-    playStream(url);
-  }
-
-  playBtn.addEventListener('click', start);
-  input.addEventListener('keydown', function(e){ if (e.key === 'Enter') start(); });
-
-  // Auto-load the default stream on page open
-  start();
-</script>
-
+<script type="module" src="js/main.js"></script>
 </body>
 </html>

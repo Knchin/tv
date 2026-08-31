@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#050816">
+<title>LBC LB2 — Live TV Stream Report · NOVA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/app.css">
+<style>
+  /* Report-specific styling layered over the design system */
+  .report-hero { padding: clamp(34px,6vw,70px) 0 clamp(20px,4vw,36px); }
+  .report-hero h1 { font-size: clamp(1.7rem,3.4vw,2.6rem); font-weight:800; letter-spacing:-0.03em; background:linear-gradient(120deg,#fff 20%,var(--accent-2) 60%,var(--accent)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+  .report-hero .sub { color:var(--text-muted); max-width:760px; margin-top:14px; }
+  .report-hero .sub b { color:var(--text); }
+  .hero-meta { display:flex; flex-wrap:wrap; gap:10px; margin-top:22px; }
+  .chip { background:var(--glass); border:1px solid var(--border); color:var(--text-muted); font-size:13px; padding:7px 14px; border-radius:var(--radius-full); font-family:var(--font-mono); }
+  .chip b { color:var(--text); }
+  .chip .ok { color:var(--success); }
+
+  .report-main { padding: 8px 0 70px; }
+  .report-section { margin-bottom: clamp(34px,5vh,52px); }
+  .report-section > h2 { display:flex; align-items:center; gap:12px; font-size:clamp(1.2rem,2.2vw,1.5rem); margin-bottom:18px; }
+  .report-section > h2 .num { display:inline-flex; align-items:center; justify-content:center; min-width:30px; height:30px; padding:0 8px; background:var(--glass); border:1px solid var(--border-strong); color:var(--accent-2); border-radius:9px; font-size:13px; font-family:var(--font-mono); font-weight:700; }
+  .report-section > p { color:var(--text-secondary); max-width:820px; margin-bottom:14px; }
+  .report-section > p b { color:var(--text); }
+
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; }
+  .card { background:var(--glass); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); }
+  .card .label { font-size:12px; text-transform:uppercase; letter-spacing:0.6px; color:var(--text-muted); margin-bottom:6px; }
+  .card .value { font-size:15px; font-weight:600; word-break:break-word; color:var(--text); }
+  .card .value.small { font-size:13px; font-weight:500; font-family:var(--font-mono); color:var(--text-secondary); }
+
+  .pill-group { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .pill { font-size:12px; font-family:var(--font-mono); padding:5px 11px; border-radius:var(--radius-full); border:1px solid var(--border); background:var(--glass); color:var(--text-secondary); }
+  .pill.hls { color:var(--success); border-color:rgba(52,211,153,0.4); }
+  .pill.h264 { color:var(--info); border-color:rgba(92,200,255,0.4); }
+  .pill.aac { color:var(--warning); border-color:rgba(251,191,36,0.4); }
+  .pill.cf { color:var(--accent-2); border-color:rgba(92,200,255,0.5); }
+
+  .players { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+  .pchip { font-size:13px; padding:7px 14px; border-radius:var(--radius-full); border:1px solid var(--border); background:var(--glass); color:var(--text-secondary); }
+  .pchip b { color:var(--text); }
+  .pchip.default { border-color:var(--accent); color:var(--accent-2); }
+
+  .table-wrap { overflow-x:auto; border:1px solid var(--border); border-radius:var(--radius); }
+  table { width:100%; border-collapse:collapse; font-size:14px; min-width:520px; }
+  thead th { background:var(--surface-solid); text-align:left; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted); padding:12px 16px; border-bottom:1px solid var(--border); }
+  tbody td { padding:12px 16px; border-bottom:1px solid var(--hairline); vertical-align:top; color:var(--text-secondary); }
+  tbody tr:last-child td { border-bottom:none; }
+  tbody tr:nth-child(even) { background:rgba(255,255,255,0.02); }
+  tbody td code { color:var(--accent-2); }
+
+  pre { position:relative; background:rgba(3,6,18,0.6); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px; overflow-x:auto; font-family:var(--font-mono); font-size:13px; line-height:1.6; color:#c9d1d9; margin:14px 0; white-space:pre; }
+  pre .cmt { color:#5c6f92; }
+  pre .str { color:#a5d6ff; }
+  pre .key { color:#79c0ff; }
+  pre .tok { color:#d29922; }
+  code.inline { background:var(--surface-solid); border:1px solid var(--border); border-radius:6px; padding:1px 6px; font-family:var(--font-mono); font-size:13px; color:var(--accent-2); }
+
+  .copy-btn { position:absolute; top:10px; right:10px; background:var(--surface-hover); border:1px solid var(--border); color:var(--text-muted); font-size:12px; padding:4px 10px; border-radius:6px; cursor:pointer; font-family:var(--font-mono); transition:all .15s; z-index:1; }
+  .copy-btn:hover { color:var(--text); border-color:var(--accent-2); }
+
+  .steps { list-style:none; counter-reset:step; }
+  .steps li { counter-increment:step; position:relative; padding:0 0 24px 52px; }
+  .steps li::before { content:counter(step); position:absolute; left:0; top:0; width:34px; height:34px; display:flex; align-items:center; justify-content:center; background:var(--glass); border:1px solid var(--border-strong); border-radius:50%; font-family:var(--font-mono); font-weight:700; color:var(--accent-2); }
+  .steps li::after { content:""; position:absolute; left:16px; top:34px; bottom:0; width:2px; background:var(--border); }
+  .steps li:last-child::after { display:none; }
+  .steps li h3 { font-size:15px; margin-bottom:6px; color:var(--text); }
+  .steps li p { color:var(--text-muted); font-size:14px; margin-bottom:10px; }
+  .steps li p code { color:var(--accent-2); }
+
+  .alert { border-radius:var(--radius); padding:14px 18px; margin:18px 0; border:1px solid; font-size:14px; display:flex; gap:12px; align-items:flex-start; }
+  .alert .icon { font-size:18px; line-height:1.4; }
+  .alert.warn { background:rgba(251,191,36,0.08); border-color:rgba(251,191,36,0.4); color:var(--text-secondary); }
+  .alert.warn .icon { color:var(--warning); }
+  .alert.info { background:rgba(92,200,255,0.08); border-color:rgba(92,200,255,0.4); color:var(--text-secondary); }
+  .alert.info .icon { color:var(--info); }
+  .alert.good { background:rgba(52,211,153,0.08); border-color:rgba(52,211,153,0.4); color:var(--text-secondary); }
+  .alert.good .icon { color:var(--success); }
+  .alert b { color:var(--text); }
+  .alert code { color:var(--accent-2); font-family:var(--font-mono); background:rgba(255,255,255,0.05); padding:1px 6px; border-radius:5px; }
+
+  h3.sub { margin:24px 0 8px; font-size:15px; color:var(--text); }
+
+  .player-wrap { border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; background:#000; box-shadow:var(--shadow-card); }
+  .player-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 16px; background:var(--glass-strong); border-bottom:1px solid var(--border); }
+  .player-bar .title { display:flex; align-items:center; gap:10px; font-weight:700; font-size:15px; }
+  .player-bar .status { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-muted); }
+  .status-live { display:inline-flex; align-items:center; gap:6px; color:var(--success); font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:.5px; }
+  .status-live .smdot { width:8px; height:8px; border-radius:50%; background:var(--success); animation:livePulse 1.6s infinite; }
+  .player-box { position:relative; width:100%; aspect-ratio:16/9; background:#000; }
+  .player-box video { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000; }
+  .player-loading, .player-err, .no-src { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:var(--text-muted); text-align:center; padding:24px; font-size:14px; }
+  .player-err { color:var(--danger); }
+  .player-loading .spin { width:34px; height:34px; border:3px solid rgba(92,200,255,0.15); border-top-color:var(--accent); border-radius:50%; animation:spin .9s linear infinite; }
+  .stream-input { display:flex; gap:10px; margin-top:14px; }
+  .stream-input input { flex:1; background:var(--glass); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-family:var(--font-mono); font-size:13px; padding:10px 14px; outline:none; min-width:0; }
+  .stream-input input:focus { border-color:var(--border-strong); }
+
+  footer.site-footer2 { border-top:1px solid var(--border); padding:28px var(--gutter) 40px; color:var(--text-faint); font-size:13px; text-align:center; }
+  footer.site-footer2 code { font-family:var(--font-mono); color:var(--text-muted); background:rgba(255,255,255,0.05); padding:2px 7px; border-radius:6px; }
+
+  @media (max-width:640px){ .steps li { padding-left:48px; } }
+</style>
+</head>
+<body>
+<div class="app-bg" aria-hidden="true"></div>
+<div data-nav></div>
+
+<header class="report-hero">
+  <div class="container">
+    <span class="hero-eyebrow rise">✶ Live Stream · Verified Online</span>
+    <h1 class="rise rise-1">LBC LB2 — Live TV Stream Report</h1>
+    <p class="sub rise rise-2">
+      Full technical analysis of <b>LBC (LB2)</b>, a Lebanese live TV channel embedded via
+      <code class="inline">elahmad.ru</code>. This report covers the player used, the underlying
+      HLS source, the multi-layer URL protection scheme, and how to extract &amp; stream the feed yourself.
+    </p>
+    <div class="hero-meta rise rise-3">
+      <span class="chip">Channel: <b>LB2 / LBC</b></span>
+      <span class="chip">Type: <b>Live TV</b></span>
+      <span class="chip">Region: <b>Lebanon / Arabic</b></span>
+      <span class="chip">Status: <b class="ok">● ONLINE</b></span>
+    </div>
+  </div>
+</header>
+
+<main class="container report-main">
+
+  <!-- 0. LIVE PLAYER -->
+  <section class="report-section" id="player">
+    <h2><span class="num">&#9654;</span> Live Player</h2>
+
+    <div class="player-wrap">
+      <div class="player-bar">
+        <div class="title"><span class="live-badge"><span class="dot"></span> LIVE</span><span>LBC · LB2</span></div>
+        <div class="status" id="player-status-label"><span class="status-live"><span class="smdot"></span> Loading stream…</span></div>
+      </div>
+      <div class="player-box">
+        <video id="live-video" controls playsinline></video>
+        <div class="player-loading" id="player-loading"><div class="spin"></div><span>Connecting to live stream…</span></div>
+        <div class="no-src" id="player-nosrc" style="display:none"><span>No active stream URL.</span><span style="font-size:13px">Enter a fresh <code class="inline">.m3u8</code> URL below and press <b>Play</b>.</span></div>
+        <div class="player-err" id="player-err" style="display:none"><span>⚠ Failed to load the stream.</span><span style="font-size:13px">The token may have expired. Get a fresh URL and retry.</span></div>
+      </div>
+    </div>
+
+    <div class="stream-input">
+      <input id="stream-input" type="text" spellcheck="false" placeholder="Paste a fresh .m3u8 stream URL here…" />
+      <button class="btn btn-primary" id="play-btn" type="button">Play</button>
+    </div>
+
+    <div class="alert info" style="margin-top:18px">
+      <span class="icon">&#9432;</span>
+      <div>The embedded URL token is time-limited (~30 min) and may have expired. Paste a fresh URL (or generate one) to replay.</div>
+    </div>
+  </section>
+
+  <!-- 1. STREAM SOURCE -->
+  <section class="report-section">
+    <h2><span class="num">01</span> Stream Source</h2>
+    <p>The channel is delivered as an <b>HLS</b> stream from a Cloudflare-fronted media server.</p>
+    <div style="position:relative">
+      <button class="copy-btn" data-copy="stream-url">Copy</button>
+      <pre id="stream-url">https://games1.elahmad.store/tv13_www_elahmad._lb2/index.m3u8?token=7a4d43792b008bff71b40eac190ae4f0ce1d7f91-afbd1f21eedaf1f8ceef8c75771ed4e4-1788192661-1788190861</pre>
+    </div>
+    <div class="alert warn">
+      <span class="icon">&#9888;&#65039;</span>
+      <div><b>This token is time-limited (~30 minutes).</b> Do not rely on the URL above — it will expire. To obtain a fresh, working URL at any time, use the extraction recipe in section 05 or the player above.</div>
+    </div>
+    <div class="pill-group">
+      <span class="pill hls">HLS / .m3u8</span>
+      <span class="pill h264">H.264 / AVC</span>
+      <span class="pill aac">AAC Audio</span>
+      <span class="pill cf">Cloudflare CDN</span>
+    </div>
+  </section>
+
+  <!-- 2. PLAYER ANALYSIS -->
+  <section class="report-section">
+    <h2><span class="num">02</span> Player Analysis</h2>
+    <p>
+      The page embeds a switchable multi-player. The <b>default</b> is the commercial
+      <b>RadiantMP</b> HTML5 player. Several alternative players can be selected via the in-page player dropdown.
+    </p>
+    <div class="players">
+      <span class="pchip default"><b>Radian (RadiantMP)</b> — default</span>
+      <span class="pchip">VideoJS</span>
+      <span class="pchip">Clappr</span>
+      <span class="pchip">TheoPlayer</span>
+      <span class="pchip">JW Player 8</span>
+      <span class="pchip">Plyr</span>
+      <span class="pchip">Bitmovin</span>
+      <span class="pchip">Shaka</span>
+      <span class="pchip">SLDP</span>
+    </div>
+    <div class="alert info" style="margin-top:18px">
+      <span class="icon">&#9432;</span>
+      <div>You do <b>not</b> need any of these embeds to watch. Since the source is plain HLS, the decrypted <code class="inline">.m3u8</code> URL plays directly in any HLS-capable app (VLC, mpv, ffplay, browser <code class="inline">&lt;video&gt;</code>).</div>
+    </div>
+  </section>
+
+  <!-- 3. STREAM SPECS -->
+  <section class="report-section">
+    <h2><span class="num">03</span> Stream Specification</h2>
+    <div class="grid">
+      <div class="card"><div class="label">Container</div><div class="value">HLS (m3u8) / MPEG-TS</div></div>
+      <div class="card"><div class="label">Video Codec</div><div class="value">H.264 (avc1.640029)</div></div>
+      <div class="card"><div class="label">Audio Codec</div><div class="value">AAC (mp4a.40.2)</div></div>
+      <div class="card"><div class="label">Resolution</div><div class="value">1024 × 576</div></div>
+      <div class="card"><div class="label">Frame Rate</div><div class="value">25 fps</div></div>
+      <div class="card"><div class="label">Bandwidth</div><div class="value">~1.45 Mbps</div></div>
+      <div class="card"><div class="label">Segment Duration</div><div class="value">2 – 6 s</div></div>
+      <div class="card"><div class="label">Media Server</div><div class="value small">games1.elahmad.store</div></div>
+    </div>
+
+    <h3 class="sub">Master Playlist</h3>
+    <pre><span class="cmt"># Top-level playlist pointing to a single rendition</span>
+#EXTM3U
+#EXT-X-STREAM-INF:<span class="tok">AVERAGE-BANDWIDTH=1160000</span>,<span class="tok">BANDWIDTH=1450000</span>,
+  <span class="tok">RESOLUTION=1024x576</span>,<span class="tok">FRAME-RATE=25.000</span>,
+  <span class="tok">CODECS="avc1.640029,mp4a.40.2"</span>
+tracks-v1a1/mono.m3u8?token=...</pre>
+
+    <h3 class="sub">Media Playlist (segments)</h3>
+    <pre><span class="cmt"># Live, rolling TS segments with token appended to each</span>
+#EXTM3U
+#EXT-X-TARGETDURATION:6
+#EXT-X-VERSION:3
+#EXT-X-MEDIA-SEQUENCE:360282
+#EXT-X-PROGRAM-DATE-TIME:2026-08-31T14:00:44Z
+#EXTINF:6.000,
+2026/08/31/14/00/44-06000.ts?token=...
+#EXTINF:2.000,
+2026/08/31/14/00/50-02000.ts?token=...</pre>
+  </section>
+
+  <!-- 4. URL PROTECTION -->
+  <section class="report-section">
+    <h2><span class="num">04</span> URL Protection Scheme</h2>
+    <p>The stream URL is protected by <b>two layers</b> plus several anti-abuse measures:</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Layer</th><th>Mechanism</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td>1 — Encryption</td><td><code>AES-256-CBC</code> + <code>PKCS#7</code> padding</td><td>Obscures the raw URL until decrypted client-side</td></tr>
+          <tr><td>2 — Token</td><td><code>token=...</code> query param on every .m3u8/.ts request</td><td>Time-limited (~30 min); must refresh by re-running the extraction</td></tr>
+          <tr><td>3 — CSRF</td><td><code>csrf_token</code> required in the POST body</td><td>Must extract from the <code>&lt;meta name="csrf-token"&gt;</code> tag</td></tr>
+          <tr><td>4 — Referrer</td><td>Checks the <code>Referer</code> header (<code>elahmad.ru</code>)</td><td>Only allows requests that appear to come from the site</td></tr>
+          <tr><td>5 — Ad-block guard</td><td>Injects <code>ads.vidoomy.com</code> SDK; shows overlay if blocked</td><td>Anti ad-blocker / monetisation</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="alert info" style="margin-top:18px">
+      <span class="icon">&#9432;</span>
+      <div>The client-side decrypt (<code class="inline">my_crypt_new</code>) uses <b>AES-256-CBC</b> with a 32-byte hex key and 16-byte hex IV, Base64 ciphertext, and PKCS#7 padding — the same scheme replicated server-side in the bundled <code class="inline">/api/token</code> function.</div>
+    </div>
+  </section>
+
+  <!-- 5. EXTRACTION RECIPE -->
+  <section class="report-section">
+    <h2 id="srcrecipe"><span class="num">05</span> How to Extract a Fresh URL</h2>
+    <p>Replicate this <b>4-step recipe</b> whenever you need a fresh, non-expired stream URL:</p>
+
+    <ol class="steps">
+      <li>
+        <h3>Get the page &amp; CSRF token</h3>
+        <p><code class="inline">GET https://www.elahmad.ru/tv/mobiletv/glarb.php?id=lb2</code>.<br>Read the <code class="inline">content</code> of the <code class="inline">&lt;meta name="csrf-token"&gt;</code> tag.</p>
+      </li>
+      <li>
+        <h3>POST to the result endpoint</h3>
+        <pre>POST https://www.elahmad.ru/tv/result/embed_result_elahmad_81.php
+Content-Type: application/x-www-form-urlencoded
+Referer: https://www.elahmad.ru/
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) ...
+
+id=lb2&amp;csrf_token=&lt;token-from-step-1&gt;</pre>
+      </li>
+      <li>
+        <h3>Parse the JSON response</h3>
+        <pre>{
+  <span class="key">"link_4"</span>: <span class="str">"&lt;base64 ciphertext&gt;"</span>,
+  <span class="key">"key"</span>:    <span class="str">"&lt;32-byte hex key&gt;"</span>,
+  <span class="key">"iv"</span>:     <span class="str">"&lt;16-byte hex iv&gt;"</span>
+}</pre>
+      </li>
+      <li>
+        <h3>Decrypt with AES-256-CBC / PKCS#7</h3>
+        <pre>ciphertext = base64decode(<span class="str">link_4</span>)
+key        = bytes.fromhex(<span class="str">key</span>)     <span class="cmt"># 32 bytes -&gt; AES-256</span>
+iv         = bytes.fromhex(<span class="str">iv</span>)      <span class="cmt"># 16 bytes</span>
+<span class="str">plaintext</span>  = AES_CBC_decrypt(ciphertext, key, iv)
+url        = unpad_pkcs7(<span class="str">plaintext</span>)</pre>
+      </li>
+    </ol>
+
+    <div class="alert good">
+      <span class="icon">&#10003;</span>
+      <div>The output is your fresh <code class="inline">.m3u8</code> stream URL — ready to play. NOVA automates this flow via the bundled <code class="inline">/api/token</code> edge function.</div>
+    </div>
+  </section>
+
+  <!-- 6. STREAM / VIEW -->
+  <section class="report-section">
+    <h2><span class="num">06</span> How to Stream / View It</h2>
+    <p>Drop the decrypted <code class="inline">.m3u8</code> URL into any HLS-capable player:</p>
+
+    <h3 class="sub">Option A — VLC</h3>
+    <pre>Media &gt; Open Network Stream  &rarr;  paste the .m3u8 URL  &rarr;  Play</pre>
+
+    <h3 class="sub">Option B — mpv</h3>
+    <pre>mpv <span class="str">"&lt;m3u8-url&gt;"</span></pre>
+
+    <h3 class="sub">Option C — ffplay (with referer header)</h3>
+    <pre>ffplay -referer <span class="str">"https://www.elahmad.ru/"</span> -i <span class="str">"&lt;m3u8-url&gt;"</span></pre>
+
+    <h3 class="sub">Option D — Record to file (ffmpeg)</h3>
+    <div style="position:relative">
+      <button class="copy-btn" data-copy="rec-cmd">Copy</button>
+      <pre id="rec-cmd">ffmpeg -referer <span class="str">"https://www.elahmad.ru/"</span> -i <span class="str">"&lt;m3u8-url&gt;"</span> -c copy /tmp/lb2-tv.ts</pre>
+    </div>
+  </section>
+
+  <!-- 7. SUMMARY -->
+  <section class="report-section">
+    <h2><span class="num">07</span> Executive Summary</h2>
+    <div class="card">
+      <p style="font-size:14px; color:var(--text-muted)">
+        <b style="color:var(--text)">LBC (LB2)</b> is a Lebanese live TV channel served as
+        <b style="color:var(--text)">HLS</b> (1024×576, H.264 + AAC) from
+        <code style="color:var(--accent-2)">games1.elahmad.store</code> through
+        <b style="color:var(--text)">Cloudflare</b>. The embedding site uses
+        <b style="color:var(--text)">RadiantMP</b> as its default player. The stream URL is protected
+        by <b style="color:var(--text)">AES-256-CBC encryption</b> plus a
+        <b style="color:var(--text)">time-limited token</b>. No special player is needed — simply
+        decrypt the URL (section 05) and play it in VLC / mpv / ffplay / ffmpeg.
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer2">
+  <div class="container">
+    Report generated from <code class="inline">https://www.elahmad.ru/tv/mobiletv/glarb.php?id=lb2</code><br>
+    Stream tokens expire ~30 min — re-run the extraction recipe or use NOVA's player for fresh links.
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
+<script type="module">
+  import { mountNav } from "./js/nav.js";
+  mountNav("report");
+</script>
+<script>
+  (function(){
+    var API = "/api/token";
+    var vid = document.getElementById('live-video');
+    var urlInput = document.getElementById('stream-input');
+    var loading = document.getElementById('player-loading');
+    var nosrc = document.getElementById('player-nosrc');
+    var perr = document.getElementById('player-err');
+    var statusEl = document.getElementById('player-status-label');
+    var hls = null;
+
+    function setStatus(txt, live){ statusEl.innerHTML = live ? '<span class="status-live"><span class="smdot"></span> ' + txt + '</span>' : txt; }
+    function mode(k){
+      loading.style.display = k==='load' ? 'flex' : 'none';
+      perr.style.display = k==='err' ? 'flex' : 'none';
+      nosrc.style.display = k==='empty' ? 'flex' : 'none';
+    }
+    function destroy(){ if(hls){ try{hls.destroy();}catch(e){} hls=null; } vid.pause(); vid.removeAttribute('src'); try{vid.load();}catch(e){} }
+
+    function play(url){
+      if(!url) { mode('empty'); return; }
+      destroy(); mode('load'); setStatus('Loading stream&hellip;', false);
+      if(vid.canPlayType('application/vnd.apple.mpegurl')){
+        vid.src=url; vid.play();
+        vid.onloadedmetadata=function(){ mode(); setStatus('LIVE', true); };
+        vid.onerror=function(){ mode('err'); setStatus('OFFLINE', false); };
+      } else if (window.Hls && Hls.isSupported()){
+        hls = new Hls({ liveSyncDurationCount:3, maxBufferLength:30 });
+        hls.loadSource(url); hls.attachMedia(vid);
+        hls.on(Hls.Events.MANIFEST_PARSED, function(){ setStatus('LIVE', true); vid.play(); });
+        hls.on(Hls.Events.ERROR, function(e,d){
+          if(d.fatal){
+            if(d.type===Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
+            else if(d.type===Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
+            else { destroy(); mode('err'); setStatus('OFFLINE', false); }
+          }
+        });
+      } else {
+        vid.src=url; vid.play();
+        vid.onloadedmetadata=function(){ mode(); setStatus('LIVE', true); };
+        vid.onerror=function(){ mode('err'); setStatus('OFFLINE', false); };
+      }
+    }
+
+    document.getElementById('play-btn').addEventListener('click', function(){ play(urlInput.value.trim()); });
+    urlInput.addEventListener('keydown', function(e){ if(e.key==='Enter') play(urlInput.value.trim()); });
+
+    // Auto-fetch a fresh token on load
+    (async function(){
+      mode('load'); setStatus('Fetching fresh token&hellip;', false);
+      try{
+        var res = await fetch(API);
+        var data = await res.json();
+        if(!data.url) throw new Error(data.error || 'No URL');
+        urlInput.value = data.url;
+        play(data.url);
+      }catch(e){
+        mode('empty'); setStatus('Fetch failed — paste a URL', false);
+      }
+    })();
+
+    // copy buttons
+    document.querySelectorAll('.copy-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var target = document.getElementById(btn.getAttribute('data-copy'));
+        if(!target) return;
+        var text = target.textContent
+          .replace(/\[copy\]/g,'')
+          .split('\n').map(function(l){ return l.trim().replace(/\s{2,}/g,' '); }).join('\n').trim();
+        navigator.clipboard.writeText(text).then(function(){
+          var old=btn.textContent; btn.textContent='Copied!'; setTimeout(function(){ btn.textContent=old; },1400);
+        });
+      });
+    });
+  })();
+</script>
+</body>
+</html>
