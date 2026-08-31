@@ -1,5 +1,5 @@
 /* ============================================================
-   NOVA TV — main entry (ES module)
+   Tfarraj TV — main entry (ES module)
    Wires nav, player, channels, now/next and TV guide together.
    ============================================================ */
 import { LivePlayer } from "./player.js";

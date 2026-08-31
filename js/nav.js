@@ -16,7 +16,7 @@ export function mountNav(activeId) {
   document.querySelectorAll("[data-nav]").forEach((root) => {
     let inner = `<a class="brand" href="index.html" aria-label="Live TV home">
         <span class="brand-mark" aria-hidden="true">▶</span>
-        <span class="brand-name">NOVA<span>TV</span></span>
+        <span class="brand-name">Tfarraj<span>TV</span></span>
       </a>`;
 
     inner += `<nav class="nav-links" aria-label="Primary">`;
