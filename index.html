@@ -72,15 +72,8 @@
   .ovl .big { font-size: 15px; font-weight: 700; color: #fff; }
   .ovl.err .big { color: #ff8f9a; }
 
-  .controls {
-    display: flex; align-items: center; gap: 12px;
-    margin-top: 16px;
-  }
-  .status { color: #8fa5c7; font-size: 12px; margin-left: auto; font-family: ui-monospace, Menlo, monospace; }
-
   @media (max-width: 560px) {
     .brand { flex-direction: column; align-items: flex-start; }
-    .status { margin-left: 0; }
   }
 </style>
 </head>
@@ -110,10 +103,6 @@
       <div class="sub" id="err-sub">The live signal could not be loaded.</div>
     </div>
   </div>
-
-  <div class="controls">
-    <div class="status" id="status">Ready</div>
-  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
@@ -122,7 +111,6 @@
   var DEFAULT_URL = "https://games1.elahmad.store/tv13_www_elahmad._lb2/index.m3u8?token=fbab54d411c065ada67fec4357fbc6d0fd1ff62d-e04ea7d571a7a7fae6fd146d3963bba8-1788209292-1788207492";
 
   var vid = document.getElementById('vid');
-  var statusEl = document.getElementById('status');
   var errSub = document.getElementById('err-sub');
   var ovlLoading = document.getElementById('ovl-loading');
   var ovlTap = document.getElementById('ovl-tap');
@@ -150,7 +138,6 @@
     if (!url) { overlays('error'); errSub.textContent = 'No stream URL.'; return; }
     currentUrl = url;
     overlays('loading');
-    statusEl.textContent = 'Connecting…';
 
     if (hls) { try { hls.destroy(); } catch (e) {} hls = null; }
     vid.pause(); vid.removeAttribute('src'); try { vid.load(); } catch (e) {}
@@ -168,7 +155,7 @@
     if (vid.canPlayType('application/vnd.apple.mpegurl')) {
       vid.src = url;
       vid.onloadedmetadata = function(){ overlays(null); };
-      vid.onerror = function(){ overlays('error'); errSub.textContent = 'Stream failed / expired.'; statusEl.textContent = 'Offline'; };
+      vid.onerror = function(){ overlays('error'); errSub.textContent = 'Stream failed / expired.'; };
       startPlay();
       return;
     }
@@ -180,14 +167,14 @@
       hls.on(Hls.Events.MANIFEST_PARSED, function(){ startPlay(); });
       hls.on(Hls.Events.ERROR, function(evt, data) {
         if (!data.fatal) return;
-        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) { statusEl.textContent = 'Reconnecting…'; hls.startLoad(); }
-        else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) { hls.recoverMediaError(); statusEl.textContent = 'Recovering…'; }
-        else { overlays('error'); errSub.textContent = 'Stream failed / expired.'; statusEl.textContent = 'Offline'; }
+        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) { hls.startLoad(); }
+        else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) { hls.recoverMediaError(); }
+        else { overlays('error'); errSub.textContent = 'Stream failed / expired.'; }
       });
     } else {
       vid.src = url;
       vid.onloadedmetadata = function(){ overlays(null); };
-      vid.onerror = function(){ overlays('error'); errSub.textContent = 'Stream failed / expired.'; statusEl.textContent = 'Offline'; };
+      vid.onerror = function(){ overlays('error'); errSub.textContent = 'Stream failed / expired.'; };
       startPlay();
     }
   }
