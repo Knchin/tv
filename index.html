@@ -158,11 +158,6 @@
     <button class="btn-main" id="btn-refresh" aria-label="Refresh · Regenerate Token" title="Refresh · Regenerate Token"><span class="spin-sm"></span><span class="ico">🗘</span></button>
     <div class="status" id="status">Ready</div>
   </div>
-
-  <div class="hint">
-    <b>Refresh</b> mints a fresh signed token (via <code>/api/token</code>) and reloads the stream.
-    If the token service is unavailable, it plays the embedded stream instead. Tokens expire ~30 min.
-  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
@@ -188,6 +183,16 @@
     ovlError.hidden = show !== 'error';
   }
 
+  // Hide the loading overlay once real frames start flowing.
+  vid.addEventListener('playing', function(){
+    overlays(null);
+    statusEl.textContent = '● Live';
+  });
+  vid.addEventListener('canplay', function(){
+    if (!ovlError.hidden) return;
+    overlays(null);
+  });
+
   function play(url) {
     if (!url) { overlays('error'); errSub.textContent = 'No stream URL.'; return; }
     currentUrl = url;
@@ -199,9 +204,12 @@
     vid.pause(); vid.removeAttribute('src'); try { vid.load(); } catch (e) {}
 
     function startPlay() {
+      // Start muted so autoplay isn't blocked by the browser (muted autoplay is
+      // allowed). The user can unmute via the player controls.
+      vid.muted = true;
       var p = vid.play();
       if (p) p.then(function(){ userActivated = true; }).catch(function(){
-        if (!userActivated) { overlays('tap'); statusEl.textContent = 'Tap to play'; }
+        if (!userActivated) { overlays('tap'); }
       });
     }
 
