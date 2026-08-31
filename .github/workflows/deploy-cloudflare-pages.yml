@@ -30,8 +30,7 @@ jobs:
       - name: Prepare static assets
         run: |
           mkdir -p dist
-          cp index.html player.html report.html dist/
-          cp -r css js dist/
+          cp index.html dist/
           cp -r functions dist/functions
 
       - name: Ensure Cloudflare Pages project exists

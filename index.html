@@ -2,160 +2,248 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#050816">
-<meta name="description" content="Tfarraj TV — premium live television streaming experience.">
-<title>Tfarraj TV · Live Television</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/base.css">
-<link rel="stylesheet" href="css/app.css">
+<meta name="description" content="LB2 Live TV — watch and refresh the stream.">
+<title>LB2 · Live TV</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: radial-gradient(900px 500px at 50% -10%, rgba(22,119,255,.20), transparent 60%),
+                radial-gradient(700px 400px at 85% 110%, rgba(34,211,238,.10), transparent 60%),
+                linear-gradient(180deg, #050816 0%, #070d22 45%, #050816 100%);
+    color: #eef2ff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 24px;
+  }
+  .card {
+    width: 100%; max-width: 900px;
+    background: rgba(18,32,68,.55);
+    border: 1px solid rgba(120,170,245,.3);
+    border-radius: 20px;
+    padding: 22px;
+    backdrop-filter: blur(18px) saturate(150%);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+    box-shadow: 0 10px 34px rgba(2,10,28,.55), 0 0 60px rgba(22,119,255,.18);
+  }
+  .brand {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; margin-bottom: 16px;
+  }
+  .brand h1 { font-size: 20px; font-weight: 800; letter-spacing: -.02em; }
+  .brand h1 span { color: #9be7ff; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase;
+    color: #ff7a8f; background: rgba(255,59,92,.15);
+    border: 1px solid rgba(255,59,92,.4);
+    padding: 5px 12px; border-radius: 999px;
+  }
+  .badge .dot {
+    width: 8px; height: 8px; border-radius: 50%; background: #ff3b5c;
+    animation: pulse 1.6s infinite;
+  }
+  @keyframes pulse { 0%,100%{ box-shadow:0 0 0 0 rgba(255,59,92,.6);} 50%{ box-shadow:0 0 0 7px rgba(255,59,92,0);} }
+
+  .player {
+    position: relative; width: 100%; aspect-ratio: 16/9;
+    background: #000; border-radius: 14px; overflow: hidden;
+    border: 1px solid rgba(94,138,210,.25);
+  }
+  .player video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
+
+  .ovl {
+    position: absolute; inset: 0; z-index: 2; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px; text-align: center; padding: 24px; color: #c8d6f0;
+    background: radial-gradient(80% 80% at 50% 40%, rgba(8,18,38,.55), rgba(3,6,18,.92));
+  }
+  .ovl[hidden] { display: none; }
+  .ovl .spin {
+    width: 36px; height: 36px; border-radius: 50%;
+    border: 3px solid rgba(92,200,255,.15); border-top-color: #5cc8ff;
+    animation: spin .9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(359deg); } }
+  .ovl.err { color: #ff8f9a; }
+  .ovl .sub { font-size: 13px; color: #8fa5c7; }
+  .ovl .big { font-size: 15px; font-weight: 700; color: #fff; }
+  .ovl.err .big { color: #ff8f9a; }
+
+  .controls {
+    display: flex; align-items: center; gap: 12px;
+    margin-top: 16px; flex-wrap: wrap;
+  }
+  button {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 11px 20px; border-radius: 999px; cursor: pointer;
+    font-size: 14px; font-weight: 700; border: 1px solid transparent;
+    transition: transform .16s, box-shadow .25s;
+  }
+  button:active { transform: scale(.97); }
+  button:disabled { opacity: .55; cursor: not-allowed; }
+  .btn-main {
+    background: linear-gradient(135deg, #1677ff, #38a0ff);
+    color: #fff; box-shadow: 0 6px 20px rgba(22,119,255,.4);
+  }
+  .btn-main:hover:not(:disabled) { box-shadow: 0 8px 26px rgba(56,160,255,.55); }
+  .btn-main .spin-sm {
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,.3); border-top-color: #fff;
+    animation: spin .8s linear infinite; display: none;
+  }
+  .btn-main.loading .spin-sm { display: inline-block; }
+
+  .status { color: #8fa5c7; font-size: 12px; margin-left: auto; font-family: ui-monospace, Menlo, monospace; }
+  .hint { color: #5c6f92; font-size: 11px; margin-top: 12px; line-height: 1.5; }
+  .hint code { background: rgba(255,255,255,.06); padding: 1px 6px; border-radius: 5px; color: #9be7ff; font-family: ui-monospace, Menlo, monospace; }
+
+  @media (max-width: 560px) {
+    .brand { flex-direction: column; align-items: flex-start; }
+    .status { margin-left: 0; }
+  }
+</style>
 </head>
 <body>
-<div class="app-bg" aria-hidden="true"></div>
 
-<div data-nav></div>
+<div class="card">
+  <div class="brand">
+    <h1>LB2 <span>Live</span></h1>
+    <span class="badge"><span class="dot"></span> LIVE</span>
+  </div>
 
-<header class="hero">
-  <div class="container hero-inner">
-    <span class="hero-eyebrow rise">✶ Premium Live Television</span>
-    <h1 class="rise rise-1">Watch live, the way it should be.</h1>
-    <p class="hero-sub rise rise-2">A cinematic, glossy experience for streaming live channels — beautiful surfaces, resilient playback, and a guide that always shows what's on now.</p>
-    <div class="hero-cta rise rise-3" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px">
-      <a class="btn btn-primary" href="#player">▶ Watch now</a>
-      <a class="btn btn-ghost" href="#guide">TV Guide</a>
+  <div class="player">
+    <video id="vid" controls playsinline></video>
+
+    <div class="ovl" id="ovl-loading" hidden>
+      <div class="spin"></div>
+      <div class="big">Connecting to live stream…</div>
+    </div>
+
+    <div class="ovl" id="ovl-tap" hidden>
+      <div class="big">Tap to start playback</div>
+      <div class="sub">Your browser requires a tap to play audio and video.</div>
+    </div>
+
+    <div class="ovl err" id="ovl-error" hidden>
+      <div class="big">The channel is temporarily unavailable.</div>
+      <div class="sub" id="err-sub">The live signal could not be loaded.</div>
     </div>
   </div>
-</header>
 
-<main class="container">
+  <div class="controls">
+    <button class="btn-main" id="btn-refresh"><span class="spin-sm"></span> Refresh · Regenerate Token</button>
+    <div class="status" id="status">Ready</div>
+  </div>
 
-  <!-- ============ LIVESTREAM PLAYER ============ -->
-  <section class="player-section section" id="player" aria-label="Live player">
-    <div class="section-head">
-      <h2><span class="bar" aria-hidden="true"></span> Live Now</h2>
-      <span class="guide-status" id="player-status" role="status" aria-live="polite"></span>
-    </div>
-
-    <div class="player-shell rise">
-      <div class="player-frame" id="frame">
-        <video id="video" controls playsinline aria-label="Live video player"></video>
-
-        <!-- Loading -->
-        <div class="player-overlay" id="ovl-loading" hidden>
-          <div class="spinner" aria-hidden="true"></div>
-          <div class="ovl-title">Connecting to live stream</div>
-          <div class="ovl-sub">Fetching a fresh channel signal…</div>
-        </div>
-
-        <!-- Needs interaction (autoplay blocked — never bypass) -->
-        <div class="player-overlay" id="ovl-interact" hidden>
-          <div class="ovl-title">Tap to start playback</div>
-          <div class="ovl-sub">Your browser requires a tap to play audio and video.</div>
-        </div>
-
-        <!-- Reconnecting -->
-        <div class="player-overlay" id="ovl-reconnect" hidden>
-          <div class="reconnect-pill"><span class="spinner" aria-hidden="true" style="width:22px;height:22px"></span> Reconnecting…</div>
-          <div class="ovl-sub">Lost the live signal. Restoring your stream.</div>
-        </div>
-
-        <!-- Error -->
-        <div class="player-overlay err" id="ovl-error" hidden>
-          <div class="ovl-title">This channel is temporarily unavailable.</div>
-          <div class="ovl-sub" id="ovl-error-sub">The live signal could not be loaded.</div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
-            <button class="btn btn-primary" id="btn-retry">Try again</button>
-            <button class="btn btn-ghost" id="btn-regenerate">Generate fresh link</button>
-          </div>
-        </div>
-
-        <!-- Player chrome -->
-        <div class="player-chrome" id="chrome">
-          <div class="chrome-left">
-            <span class="live-badge"><span class="dot"></span> LIVE</span>
-            <span id="chrome-title">—</span>
-          </div>
-          <div class="chrome-right">
-            <button class="icon-btn" id="btn-pip" title="Picture-in-picture" aria-label="Picture-in-picture">⧉</button>
-            <button class="icon-btn" id="btn-fs" title="Fullscreen" aria-label="Fullscreen">⛶</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="player-info">
-        <div class="who">
-          <span class="channel-avatar" id="info-avatar" style="--chip-color:#1677ff">L2</span>
-          <div>
-            <h2 id="info-name">LBC 2</h2>
-            <div class="category" id="info-category">News &amp; Entertainment</div>
-          </div>
-        </div>
-        <div style="min-width:0;max-width:520px">
-          <p class="tagline" id="info-tagline">Lebanese news, shows and entertainment live.</p>
-          <div class="category" id="info-now">—</div>
-        </div>
-        <div class="info-actions">
-          <button class="btn btn-primary" id="btn-regen"><span data-spin></span> Regenerate Token</button>
-          <a class="btn btn-ghost" id="btn-share" href="#" role="button" aria-label="Share this channel">♡ Share</a>
-        </div>
-      </div>
-
-      <div class="stream-panel">
-        <div class="stream-row">
-          <input id="stream-input" type="text" spellcheck="false" aria-label="Stream URL" placeholder="Paste a fresh .m3u8 URL, or generate one…" />
-          <button class="btn btn-ghost" id="btn-play-url">Play URL</button>
-        </div>
-        <div style="font-size:0.8rem;color:var(--text-faint);margin-top:10px">
-          Stream tokens expire after ~30 minutes. Use <b>Generate fresh link</b> to pull a new signal automatically.
-        </div>
-      </div>
-    </div>
-
-    <div class="nownext">
-      <div class="nn-card progress">
-        <div class="nn-label"><span class="live-badge"><span class="dot"></span> On now</span></div>
-        <h3 id="nn-now-title">—</h3>
-        <div class="nn-time" id="nn-now-time">—</div>
-        <div class="progress-track" aria-hidden="true"><div class="progress-fill" id="nn-now-progress"></div></div>
-      </div>
-      <div class="nn-card">
-        <div class="nn-label">Up next</div>
-        <h3 id="nn-next-title">—</h3>
-        <div class="nn-time" id="nn-next-time">—</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ CHANNELS ============ -->
-  <section class="channels section" id="channels" aria-label="Channels">
-    <div class="section-head">
-      <h2><span class="bar" aria-hidden="true"></span> Channels</h2>
-      <a class="more" href="#player">Watch &rarr;</a>
-    </div>
-    <div class="carousel" id="carousel" tabindex="0" aria-label="Channel list"></div>
-  </section>
-
-  <!-- ============ TV GUIDE ============ -->
-  <section class="guide section" id="guide" aria-label="TV Guide">
-    <div class="section-head">
-      <h2><span class="bar" aria-hidden="true"></span> What's On</h2>
-      <span class="guide-status" id="guide-status">Loading program information…</span>
-    </div>
-    <div class="guide-grid" id="guide-grid">
-      <div class="guide-empty">Program information isn't available right now.</div>
-    </div>
-  </section>
-
-</main>
-
-<footer class="site-footer">
-  <div>Tfarraj <b>TV</b> — premium live television preview.</div>
-  <div style="margin-top:8px">Live playback via <code>hls.js</code> · Fresh signals via the bundled <code>/api/token</code> edge function.</div>
-</footer>
+  <div class="hint">
+    <b>Refresh</b> mints a fresh signed token (via <code>/api/token</code>) and reloads the stream.
+    If the token service is unavailable, it plays the embedded stream instead. Tokens expire ~30 min.
+  </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
-<script type="module" src="js/main.js"></script>
+<script>
+  // Fresh signed LB2 master playlist URL (media host allows CORS *, no referer).
+  var DEFAULT_URL = "https://games1.elahmad.store/tv13_www_elahmad._lb2/index.m3u8?token=e23c0a0f641fc105d546c393903b07225b68b2ae-f36b6ce991e50ad78fda2f8c1977c853-1788208101-1788206301";
+
+  var vid = document.getElementById('vid');
+  var btn = document.getElementById('btn-refresh');
+  var statusEl = document.getElementById('status');
+  var errSub = document.getElementById('err-sub');
+  var ovlLoading = document.getElementById('ovl-loading');
+  var ovlTap = document.getElementById('ovl-tap');
+  var ovlError = document.getElementById('ovl-error');
+  var currentUrl = null;
+  var hls = null;
+  var userActivated = false;
+
+  function overlays(show) {
+    ovlLoading.hidden = show !== 'loading';
+    ovlTap.hidden = show !== 'tap';
+    ovlError.hidden = show !== 'error';
+  }
+
+  function play(url) {
+    if (!url) { overlays('error'); errSub.textContent = 'No stream URL.'; return; }
+    currentUrl = url;
+    overlays('loading');
+    statusEl.textContent = 'Connecting…';
+
+    if (hls) { try { hls.destroy(); } catch (e) {} hls = null; }
+    vid.pause(); vid.removeAttribute('src'); try { vid.load(); } catch (e) {}
+
+    function startPlay() {
+      var p = vid.play();
+      if (p) p.then(function(){ userActivated = true; }).catch(function(){
+        if (!userActivated) { overlays('tap'); statusEl.textContent = 'Tap to play'; }
+      });
+    }
+
+    if (vid.canPlayType('application/vnd.apple.mpegurl')) {
+      vid.src = url;
+      vid.onloadedmetadata = function(){ overlays(null); statusEl.textContent = '● Live'; };
+      vid.onerror = function(){ overlays('error'); errSub.textContent = 'Stream failed / expired.'; statusEl.textContent = 'Offline'; };
+      startPlay();
+      return;
+    }
+
+    if (window.Hls && Hls.isSupported()) {
+      hls = new Hls({ liveSyncDurationCount: 3, liveMaxLatencyDurationCount: 8, maxBufferLength: 30, enableWorker: true });
+      hls.loadSource(url);
+      hls.attachMedia(vid);
+      hls.on(Hls.Events.MANIFEST_PARSED, function(){ startPlay(); });
+      hls.on(Hls.Events.ERROR, function(evt, data) {
+        if (!data.fatal) return;
+        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) { statusEl.textContent = 'Reconnecting…'; hls.startLoad(); }
+        else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) { hls.recoverMediaError(); statusEl.textContent = 'Recovering…'; }
+        else { overlays('error'); errSub.textContent = 'Stream failed / expired.'; statusEl.textContent = 'Offline'; }
+      });
+    } else {
+      vid.src = url;
+      vid.onloadedmetadata = function(){ overlays(null); statusEl.textContent = '● Live'; };
+      vid.onerror = function(){ overlays('error'); errSub.textContent = 'Stream failed / expired.'; statusEl.textContent = 'Offline'; };
+      startPlay();
+    }
+  }
+
+  // Tap overlay triggers playback within the user gesture (not a bypass).
+  ovlTap.addEventListener('click', function(){
+    if (!currentUrl) return;
+    userActivated = true;
+    overlays('loading');
+    statusEl.textContent = '● Live';
+    var p = vid.play();
+    if (p) p.catch(function(){});
+  });
+
+  // Refresh / regenerate token.
+  btn.addEventListener('click', async function(){
+    btn.disabled = true; btn.classList.add('loading');
+    statusEl.textContent = 'Regenerating token…';
+    try {
+      var res = await fetch('/api/token');
+      var ok = res.ok;
+      var data = ok ? await res.json() : null;
+      if (ok && data && data.url) {
+        play(data.url);
+        statusEl.textContent = 'Token renewed · ● Live';
+      } else {
+        play(DEFAULT_URL);
+        statusEl.textContent = 'Token service busy · using embedded stream';
+      }
+    } catch (e) {
+      play(DEFAULT_URL);
+      statusEl.textContent = 'Token service busy · using embedded stream';
+    } finally {
+      btn.disabled = false; btn.classList.remove('loading');
+    }
+  });
+
+  // Autoplay to start (will show tap overlay if blocked).
+  play(DEFAULT_URL);
+</script>
 </body>
 </html>
