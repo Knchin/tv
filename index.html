@@ -163,7 +163,7 @@
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
 <script>
   // Fresh signed LB2 master playlist URL (media host allows CORS *, no referer).
-  var DEFAULT_URL = "https://games1.elahmad.store/tv13_www_elahmad._lb2/index.m3u8?token=85992f7eb45145ecc96b72bb16a7ff61dc0dbbe7-bb378a316abb1a67799ddb05c8591699-1788208356-1788206556";
+  var DEFAULT_URL = "https://games1.elahmad.store/tv13_www_elahmad._lb2/index.m3u8?token=e5b81a172bbf095bb0b681ff495db96bc1da09f3-3f367b5448839109c998e86a8fcbcac2-1788208878-1788207078";
 
   var vid = document.getElementById('vid');
   var btn = document.getElementById('btn-refresh');
@@ -250,27 +250,34 @@
     if (p) p.catch(function(){});
   });
 
+  function isPlayableM3u8(url) {
+    return fetch(url, { method: 'GET' }).then(function(res){
+      if (!res.ok) return false;
+      return res.text().then(function(t){ return t.trim().indexOf('#EXTM3U') === 0; });
+    }).catch(function(){ return false; });
+  }
+
   // Refresh / regenerate token.
   btn.addEventListener('click', async function(){
     btn.disabled = true; btn.classList.add('loading');
     statusEl.textContent = 'Regenerating token…';
+    // Only trust a freshly minted URL once it is verified to actually play.
+    var urlToUse = DEFAULT_URL;
     try {
       var res = await fetch('/api/token');
       var ok = res.ok;
       var data = ok ? await res.json() : null;
-      if (ok && data && data.url) {
-        play(data.url);
+      if (ok && data && data.url && await isPlayableM3u8(data.url)) {
+        urlToUse = data.url;
         statusEl.textContent = 'Token renewed · ● Live';
       } else {
-        play(DEFAULT_URL);
-        statusEl.textContent = 'Token service busy · using embedded stream';
+        statusEl.textContent = 'Fresh token rejected · using verified stream';
       }
     } catch (e) {
-      play(DEFAULT_URL);
-      statusEl.textContent = 'Token service busy · using embedded stream';
-    } finally {
-      btn.disabled = false; btn.classList.remove('loading');
+      statusEl.textContent = 'Token service busy · using verified stream';
     }
+    play(urlToUse);
+    btn.disabled = false; btn.classList.remove('loading');
   });
 
   // Autoplay to start (will show tap overlay if blocked).

@@ -67,13 +67,17 @@ async function main() {
     console.log("Token unchanged, nothing to update.");
     return false;
   }
+  // Verify the new URL really serves an HLS playlist BEFORE writing anything,
+  // so a dead/403 token (e.g. from a datacenter egress IP) is never committed.
+  const check = await fetch(url);
+  if (!check.ok) throw new Error("New URL rejected by media server: " + check.status);
+  const body = await check.text();
+  if (body.trim().indexOf("#EXTM3U") !== 0) {
+    throw new Error("New URL is not a valid HLS playlist (status " + check.status + ")");
+  }
   html = html.replace(re, 'var DEFAULT_URL = "' + url + '";');
   fs.writeFileSync(file, html);
-  console.log("Updated DEFAULT_URL.");
-  // Verify master is reachable before committing.
-  const check = await fetch(url);
-  if (!check.ok) throw new Error("New URL not reachable: " + check.status);
-  console.log("Minted URL verified (master " + check.status + ").");
+  console.log("Updated DEFAULT_URL (verified " + check.status + ").");
   return true;
 }
 
