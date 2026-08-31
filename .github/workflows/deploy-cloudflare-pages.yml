@@ -31,7 +31,15 @@ jobs:
         run: |
           mkdir -p dist
           cp index.html dist/
+          cp -r channel dist/channel
+          cp -r assets dist/assets
+          cp -r icons dist/icons
+          cp manifest.webmanifest dist/
+          cp sw.js dist/
+          cp _headers dist/
           cp -r functions dist/functions
+          echo "--- dist tree ---"
+          find dist -type f | sort
 
       - name: Ensure Cloudflare Pages project exists
         env:

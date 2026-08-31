@@ -58,12 +58,12 @@ async function mint() {
 
 async function main() {
   const url = await mint();
-  const file = "index.html";
+  const file = "assets/channels.js";
   let html = fs.readFileSync(file, "utf8");
-  const re = /var DEFAULT_URL = "([^"]+)";/;
+  const re = /(url:\s*\n?\s*")[^"]+(")/;
   const m = html.match(re);
-  if (!m) throw new Error("DEFAULT_URL not found in index.html");
-  if (m[1] === url) {
+  if (!m) throw new Error("Channel url not found in " + file);
+  if (m[1].indexOf(url) !== -1) {
     console.log("Token unchanged, nothing to update.");
     return false;
   }
@@ -75,9 +75,9 @@ async function main() {
   if (body.trim().indexOf("#EXTM3U") !== 0) {
     throw new Error("New URL is not a valid HLS playlist (status " + check.status + ")");
   }
-  html = html.replace(re, 'var DEFAULT_URL = "' + url + '";');
+  html = html.replace(re, m[1] + url + m[2]);
   fs.writeFileSync(file, html);
-  console.log("Updated DEFAULT_URL (verified " + check.status + ").");
+  console.log("Updated channel url (verified " + check.status + ").");
   return true;
 }
 
