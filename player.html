@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LB2 · Live Player</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background:#0d1117; color:#e6edf3; height:100vh;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    display:flex; flex-direction:column;
+  }
+  .wrap { max-width:900px; margin:0 auto; width:100%; padding:20px 18px; flex:1; display:flex; flex-direction:column; gap:14px; }
+
+  .head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .head .brand { display:flex; align-items:center; gap:10px; font-weight:700; font-size:18px; }
+  .pulse { width:9px; height:9px; border-radius:50%; background:#3fb950; animation:p 1.6s infinite; }
+  @keyframes p { 0%,100%{box-shadow:0 0 0 0 rgba(63,185,80,.5)} 50%{box-shadow:0 0 0 6px rgba(63,185,80,0)} }
+  .state { font-size:12px; color:#8b949e; display:flex; align-items:center; gap:6px; }
+  .state.on { color:#3fb950; font-weight:700; text-transform:uppercase; letter-spacing:.5px; }
+  .state.off { color:#f85149; }
+
+  .player {
+    position:relative; width:100%; aspect-ratio:16/9; background:#000; border-radius:12px; overflow:hidden;
+    border:1px solid #30363d;
+  }
+  .player video { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000; }
+  .ovl { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:#8b949e; text-align:center; padding:20px; font-size:14px; }
+  .ovl .spin { width:32px; height:32px; border:3px solid rgba(255,255,255,.15); border-top-color:#bdfff0; border-radius:50%; animation:spin 1s linear infinite; }
+  @keyframes spin { to{transform:rotate(359deg)} }
+  .ovl.err { color:#f85149; }
+
+  .url-row { display:flex; gap:8px; }
+  .url-row input {
+    flex:1; background:#161b22; border:1px solid #30363d; border-radius:8px; color:#e6edf3;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:13px; padding:10px 12px; outline:none; min-width:0;
+  }
+  .url-row input:focus { border-color:#58a6ff; }
+
+  .btns { display:flex; gap:10px; flex-wrap:wrap; }
+  button {
+    background:#bdfff0; color:#04140e; border:none; border-radius:8px; font-weight:700; font-size:14px;
+    padding:10px 20px; cursor:pointer; display:inline-flex; align-items:center; gap:8px;
+  }
+  button:hover { filter:brightness(1.08); }
+  button.ghost { background:transparent; color:#e6edf3; border:1px solid #30363d; }
+  button.ghost:hover { border-color:#8b949e; }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+
+  .hint { font-size:12px; color:#8b949e; line-height:1.6; }
+  .hint b { color:#bdfff0; font-weight:600; }
+  code { font-family:ui-monospace,Menlo,monospace; background:#161b22; padding:1px 6px; border-radius:5px; font-size:12px; }
+  .spin.sm { width:14px; height:14px; border-radius:50%; border:2px solid rgba(4,20,14,.25); border-top-color:#04140e; display:inline-block; vertical-align:middle; }
+
+  @media(max-width:560px){
+    .head { flex-direction:column; align-items:flex-start; }
+    .btns { width:100%; }
+    .btns button { flex:1; justify-content:center; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="brand"><span class="pulse"></span> LB2 · LBC Live</div>
+    <div class="state off" id="state">OFFLINE</div>
+  </div>
+
+  <div class="player">
+    <video id="vid" controls playsinline></video>
+    <div class="ovl" id="ovl">
+      <div class="spin"></div>
+      <span>Connecting&hellip;</span>
+    </div>
+  </div>
+
+  <div class="url-row">
+    <input id="url" type="text" spellcheck="false" placeholder="Paste .m3u8 URL here (or generate a token)&hellip;" />
+  </div>
+
+  <div class="btns">
+    <button id="gen">Generate Token</button>
+    <button id="play" class="ghost">Play</button>
+  </div>
+
+  <div class="hint" id="hint">
+    <b>Generate Token</b> fetches a fresh LB2 URL from elahmad.ru and plays it automatically.
+    Requires the page to be served over <code>http</code> (not opened as a <code>file://</code>), e.g.
+    <code>python3 -m http.server</code> in this folder &rarr; <code>http://127.0.0.1:8000/player.html</code>.
+    You can also paste a URL manually and press <b>Play</b>.
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
+<script>
+  var PAGE = "https://www.elahmad.ru/tv/mobiletv/glarb.php?id=lb2";
+  var RESULT = "https://www.elahmad.ru/tv/result/embed_result_elahmad_81.php";
+
+  var vid = document.getElementById('vid');
+  var urlInput = document.getElementById('url');
+  var genBtn = document.getElementById('gen');
+  var playBtn = document.getElementById('play');
+  var ovl = document.getElementById('ovl');
+  var state = document.getElementById('state');
+  var hint = document.getElementById('hint');
+  var hls = null;
+
+  function setState(on){ state.className = 'state ' + (on ? 'on' : 'off'); state.textContent = on ? 'LIVE' : 'OFFLINE'; }
+  function ovlMode(kind){
+    if(kind==='load'){ ovl.style.display='flex'; ovl.className='ovl'; ovl.innerHTML='<div class="spin"></div><span>Connecting&hellip;</span>'; }
+    else if(kind==='err'){ ovl.style.display='flex'; ovl.className='ovl err'; ovl.innerHTML='<span>&#9888; Stream failed / token expired.</span><span style="font-size:12px">Generate a new token and retry.</span>'; }
+    else { ovl.style.display='none'; }
+  }
+
+  function destroy(){
+    if(hls){ try{hls.destroy();}catch(e){} hls=null; }
+    vid.pause(); vid.removeAttribute('src');
+  }
+
+  function play(url){
+    if(!url) return;
+    destroy(); ovlMode('load'); setState(false);
+    if(vid.canPlayType('application/vnd.apple.mpegurl')){
+      vid.src = url;
+      vid.addEventListener('loadedmetadata', function(){ ovlMode(); setState(true); });
+      vid.addEventListener('error', function(){ ovlMode('err'); });
+      vid.play();
+    } else if (window.Hls && Hls.isSupported()){
+      hls = new Hls({ liveSyncDurationCount:3, maxBufferLength:30 });
+      hls.loadSource(url); hls.attachMedia(vid);
+      hls.on(Hls.Events.MANIFEST_PARSED, function(){ ovlMode(); setState(true); vid.play(); });
+      hls.on(Hls.Events.ERROR, function(evt,data){
+        if(data.fatal){
+          if(data.type===Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
+          else if(data.type===Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
+          else { destroy(); ovlMode('err'); }
+        }
+      });
+    } else {
+      vid.src=url;
+      vid.addEventListener('loadedmetadata', function(){ ovlMode(); setState(true); });
+      vid.addEventListener('error', function(){ ovlMode('err'); });
+      vid.play();
+    }
+  }
+
+  playBtn.addEventListener('click', function(){ play(urlInput.value.trim()); });
+  urlInput.addEventListener('keydown', function(e){ if(e.key==='Enter') play(urlInput.value.trim()); });
+
+  function decryptUrl(data){
+    var ciphertext = CryptoJS.enc.Base64.parse(data.link_4);
+    var key = CryptoJS.enc.Hex.parse(data.key);
+    var iv = CryptoJS.enc.Hex.parse(data.iv);
+    var dec = CryptoJS.AES.decrypt({ ciphertext: ciphertext }, key,
+        { iv: iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 });
+    return dec.toString(CryptoJS.enc.Utf8);
+  }
+
+  genBtn.addEventListener('click', async function(){
+    genBtn.disabled = true;
+    var old = genBtn.innerHTML;
+    genBtn.innerHTML = '<span class="spin sm"></span>';
+    try{
+      hint.innerHTML = '<b>Generating&hellip;</b> fetching page &amp; token. This requires a server to avoid CORS (see note).';
+      var page = await fetch(PAGE);
+      var html = await page.text();
+      var m = html.match(/name="csrf-token" content="([^"]+)"/);
+      if(!m) throw new Error('Could not read csrf-token');
+      var body = 'id=lb2&csrf_token=' + encodeURIComponent(m[1]);
+      var res = await fetch(RESULT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body
+      });
+      var data = await res.json();
+      if(!data.link_4) throw new Error('No link in response');
+      var url = decryptUrl(data);
+      urlInput.value = url;
+      play(url);
+      hint.innerHTML = '<b>Token generated.</b> Fresh URL loaded. Tokens expire ~30 min &mdash; regenerate as needed.';
+    }catch(e){
+      hint.innerHTML = '<b>' + e + '</b><br>Generation blocked (CORS) — this page must be served over ' +
+        '<code>http</code>, not opened as a local file. Paste a fresh URL manually if needed.';
+    }finally{
+      genBtn.disabled=false; genBtn.innerHTML = old;
+    }
+  });
+</script>
+</body>
+</html>
