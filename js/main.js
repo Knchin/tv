@@ -260,7 +260,10 @@ $("#btn-pip").addEventListener("click", async () => {
 
 // User-gesture resume for the autoplay-block overlay (no policy bypass).
 ovl.interact.addEventListener("click", () => {
-  if (state.lastUrl) player.retry(state.lastUrl);
+  if (!state.lastUrl) return;
+  ovl.interact.hidden = true;
+  statusEl.textContent = "● Live";
+  player.userGesturedPlay();
 });
 
 $("#btn-share").addEventListener("click", async (e) => {

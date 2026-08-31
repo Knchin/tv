@@ -19,6 +19,7 @@ export class LivePlayer {
     this._maxRetries = 3;
     this._retryTimer = null;
     this._loading = false;
+    this._userActivated = false;
     this._bound = {};
 
     this._setupAttrs();
@@ -106,7 +107,12 @@ export class LivePlayer {
       hls.loadSource(src);
       hls.attachMedia(el);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        el.play().then(() => {}).catch(() => this._handleAutoplayBlock());
+        el.play().then(() => {
+          this._userActivated = true;
+        }).catch(() => {
+          // If user already gestured, keep trying; otherwise surface the tap overlay.
+          if (!this._userActivated) this._handleAutoplayBlock();
+        });
       });
       hls.on(Hls.Events.ERROR, (_evt, data) => {
         if (!data.fatal) return;
@@ -150,6 +156,18 @@ export class LivePlayer {
   _autoplay() {
     const el = this.video;
     el.play().then(() => {}).catch(() => this._handleAutoplayBlock());
+  }
+
+  /**
+   * Resume playback from a user gesture (e.g. tapping the overlay).
+   * Calling play() synchronously within the gesture grants this element
+   * play permission; hls.js will then pick it up on manifest parse.
+   */
+  userGesturedPlay() {
+    this._userActivated = true;
+    const el = this.video;
+    const p = el.play();
+    if (p) p.catch(() => { /* hls will attach + play shortly */ });
   }
 
   retry(src) {
