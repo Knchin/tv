@@ -1,0 +1,44 @@
+name: Auto-refresh LB2 token
+
+on:
+  schedule:
+    # LB2 tokens last ~30 min; refresh well before expiry.
+    - cron: "*/25 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: "token-refresh"
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Mint & update embedded token
+        run: node scripts/mint-token.mjs
+
+      - name: Commit fresh token if changed
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add index.html
+            git commit -m "chore: refresh LB2 stream token (auto)"
+            git push
+            echo "Pushed refreshed token."
+          else
+            echo "No token change; nothing to push."
+          fi
