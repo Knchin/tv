@@ -85,18 +85,15 @@
   </div>
 
   <div class="hint" id="hint">
-    <b>Generate Token</b> fetches a fresh LB2 URL from elahmad.ru and plays it automatically.
-    Requires the page to be served over <code>http</code> (not opened as a <code>file://</code>), e.g.
-    <code>python3 -m http.server</code> in this folder &rarr; <code>http://127.0.0.1:8000/player.html</code>.
-    You can also paste a URL manually and press <b>Play</b>.
+    <b>Generate Token</b> fetches a fresh LB2 stream URL via the bundled Cloudflare Pages
+    <code>/api/token</code> function and plays it automatically. Tokens expire ~30 min &mdash;
+    regenerate as needed. You can also paste a URL manually and press <b>Play</b>.
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
 <script>
-  var PAGE = "https://www.elahmad.ru/tv/mobiletv/glarb.php?id=lb2";
-  var RESULT = "https://www.elahmad.ru/tv/result/embed_result_elahmad_81.php";
+  var API = "/api/token";
 
   var vid = document.getElementById('vid');
   var urlInput = document.getElementById('url');
@@ -149,40 +146,20 @@
   playBtn.addEventListener('click', function(){ play(urlInput.value.trim()); });
   urlInput.addEventListener('keydown', function(e){ if(e.key==='Enter') play(urlInput.value.trim()); });
 
-  function decryptUrl(data){
-    var ciphertext = CryptoJS.enc.Base64.parse(data.link_4);
-    var key = CryptoJS.enc.Hex.parse(data.key);
-    var iv = CryptoJS.enc.Hex.parse(data.iv);
-    var dec = CryptoJS.AES.decrypt({ ciphertext: ciphertext }, key,
-        { iv: iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 });
-    return dec.toString(CryptoJS.enc.Utf8);
-  }
-
   genBtn.addEventListener('click', async function(){
     genBtn.disabled = true;
     var old = genBtn.innerHTML;
     genBtn.innerHTML = '<span class="spin sm"></span>';
     try{
-      hint.innerHTML = '<b>Generating&hellip;</b> fetching page &amp; token. This requires a server to avoid CORS (see note).';
-      var page = await fetch(PAGE);
-      var html = await page.text();
-      var m = html.match(/name="csrf-token" content="([^"]+)"/);
-      if(!m) throw new Error('Could not read csrf-token');
-      var body = 'id=lb2&csrf_token=' + encodeURIComponent(m[1]);
-      var res = await fetch(RESULT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: body
-      });
+      hint.innerHTML = '<b>Generating fresh token&hellip;</b>';
+      var res = await fetch(API);
       var data = await res.json();
-      if(!data.link_4) throw new Error('No link in response');
-      var url = decryptUrl(data);
-      urlInput.value = url;
-      play(url);
+      if(!data.url) throw new Error(data.error || 'No URL in response');
+      urlInput.value = data.url;
+      play(data.url);
       hint.innerHTML = '<b>Token generated.</b> Fresh URL loaded. Tokens expire ~30 min &mdash; regenerate as needed.';
     }catch(e){
-      hint.innerHTML = '<b>' + e + '</b><br>Generation blocked (CORS) — this page must be served over ' +
-        '<code>http</code>, not opened as a local file. Paste a fresh URL manually if needed.';
+      hint.innerHTML = '<b>' + e + '</b><br>Could not reach the token endpoint. Paste a fresh URL manually if needed.';
     }finally{
       genBtn.disabled=false; genBtn.innerHTML = old;
     }
