@@ -20,6 +20,13 @@ export const channels = [
 // Only "lb2" has a real, working stream from the token function.
 export const supportedStreamIds = ["lb2"];
 
+// Fresh signed LB2 master playlist URL. This plays directly in the browser —
+// the media host (games1.elahmad.store) allows cross-origin and needs no
+// referer, exactly like the original working index.html. It expires (~30 min);
+// mint a replacement via the same extraction recipe.
+export const DEFAULT_STREAM_URL =
+  "https://games1.elahmad.store/tv13_www_elahmad._lb2/index.m3u8?token=18299e873c6bee71f49d4264714f1e8b238495e4-feb0c3d464b56af0c99a161511f2649f-1788207135-1788205335";
+
 const CATEGORIES = ["News & Entertainment", "News", "Sports", "Music", "Cinema", "Family"];
 
 const programTitles = {
@@ -71,19 +78,31 @@ export function getNowNext(channel) {
   return { now, next, nowMin };
 }
 
-// Resolve a supported channel's fresh stream URL from the Pages Function.
-export async function getChannelUrl(id) {
+// Resolve a supported channel's stream URL. For lb2 we return the embedded
+// fresh signed URL directly (plays instantly, like the original index.html).
+// `forceFresh` attempts to mint a brand-new token via the /api/token edge
+// function; if that is unreachable (the upstream may block Cloudflare egress)
+// we fall back to the last known-good URL instead of failing the playback.
+export async function getChannelUrl(id, { forceFresh = false } = {}) {
   if (!supportedStreamIds.includes(id)) {
     throw new Error("Channel stream not configured on this deployment.");
   }
-  const res = await fetch("/api/token");
-  if (!res.ok) {
-    const t = await res.text().catch(() => "");
-    throw new Error("Token service error (" + res.status + ") " + t);
+  if (!forceFresh) return DEFAULT_STREAM_URL;
+
+  try {
+    const res = await fetch("/api/token");
+    if (!res.ok) {
+      const t = await res.text().catch(() => "");
+      throw new Error("Token service error (" + res.status + ") " + t);
+    }
+    const data = await res.json();
+    if (!data.url) throw new Error(data.error || "No stream URL returned.");
+    return data.url;
+  } catch (err) {
+    // Return the embedded URL so the live stream keeps working even when the
+    // edge token service is blocked; surface the refresh failure to the user.
+    return DEFAULT_STREAM_URL;
   }
-  const data = await res.json();
-  if (!data.url) throw new Error(data.error || "No stream URL returned.");
-  return data.url;
 }
 
 export { CATEGORIES };

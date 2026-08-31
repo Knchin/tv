@@ -4,7 +4,7 @@
    ============================================================ */
 import { LivePlayer } from "./player.js";
 import { mountNav } from "./nav.js";
-import { channels, getGrid, getNowNext, getChannelUrl, supportedStreamIds } from "./data.js";
+import { channels, getGrid, getNowNext, getChannelUrl, supportedStreamIds, DEFAULT_STREAM_URL } from "./data.js";
 import "./theme.js";
 
 mountNav("home");
@@ -124,8 +124,9 @@ async function loadStream(ch) {
 }
 
 /* ============================================================
-   Regenerate token — pull a fresh signed URL from the encrypted
-   server (/api/token) and immediately reload the player.
+   Regenerate token — attempt to mint a fresh signed URL from the
+   encrypted server (/api/token). Falls back to the embedded URL so
+   the stream keeps playing even if the edge token service is blocked.
    ============================================================ */
 async function regenerateToken() {
   const btn = $("#btn-regen");
@@ -133,13 +134,16 @@ async function regenerateToken() {
   btn.classList.add("is-loading");
   ovl.loading.hidden = false;
   statusEl.textContent = "Regenerating token…";
+  const prev = state.lastUrl;
   try {
-    const url = await getChannelUrl("lb2");
+    const url = await getChannelUrl("lb2", { forceFresh: true });
     state.lastUrl = url;
     $("#stream-input").value = url;
     player.retry(url);
-    statusEl.textContent = "● Live";
     frame.classList.add("is-live");
+    statusEl.textContent = url === prev && url === DEFAULT_STREAM_URL
+      ? "Using embedded stream (fresh mint unavailable)"
+      : "● Live";
   } catch (err) {
     errSub.textContent = err.message || "Could not regenerate the token.";
     for (const k in ovl) ovl[k].hidden = true;
