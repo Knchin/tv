@@ -32,18 +32,26 @@ jobs:
           mkdir -p dist
           cp index.html player.html dist/
 
+      - name: Ensure Cloudflare Pages project exists
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_PROJECT_NAME: ${{ vars.CLOUDFLARE_PROJECT_NAME }}
+        run: |
+          if ! wrangler pages project list | grep -wq "$CLOUDFLARE_PROJECT_NAME"; then
+            echo "Creating Pages project $CLOUDFLARE_PROJECT_NAME..."
+            wrangler pages project create "$CLOUDFLARE_PROJECT_NAME" --production-branch=main
+          else
+            echo "Pages project $CLOUDFLARE_PROJECT_NAME already exists"
+          fi
+
       - name: Deploy to Cloudflare Pages
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_PROJECT_NAME: ${{ vars.CLOUDFLARE_PROJECT_NAME }}
         run: |
-          set -e
-          wrangler --version
-          wrangler pages project list --account-id="$CLOUDFLARE_ACCOUNT_ID" \
-            >/dev/null 2>&1 && echo "Project exists" || echo "Project does not exist yet"
           wrangler pages deploy dist \
             --project-name="$CLOUDFLARE_PROJECT_NAME" \
-            --account-id="$CLOUDFLARE_ACCOUNT_ID" \
             --branch=main \
             --commit-dirty=true
