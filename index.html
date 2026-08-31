@@ -74,51 +74,9 @@
 
   .controls {
     display: flex; align-items: center; gap: 12px;
-    margin-top: 16px; flex-wrap: wrap;
+    margin-top: 16px;
   }
-  .urlbox {
-    flex: 1; min-width: 180px;
-    padding: 11px 14px;
-    background: rgba(5,8,22,.6);
-    border: 1px solid rgba(94,138,210,.25);
-    border-radius: 999px;
-    color: #9be7ff;
-    font-family: ui-monospace, Menlo, monospace;
-    font-size: 12px;
-    outline: none;
-  }
-  .urlbox:focus { border-color: rgba(120,170,245,.5); }
-  button {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 11px 20px; border-radius: 999px; cursor: pointer;
-    font-size: 14px; font-weight: 700; border: 1px solid transparent;
-    transition: transform .16s, box-shadow .25s;
-  }
-  button:active { transform: scale(.97); }
-  button:disabled { opacity: .55; cursor: not-allowed; }
-  .btn-main {
-    background: linear-gradient(135deg, #1677ff, #38a0ff);
-    color: #fff; box-shadow: 0 6px 20px rgba(22,119,255,.4);
-  }
-  .btn-main:hover:not(:disabled) { box-shadow: 0 8px 26px rgba(56,160,255,.55); }
-  .btn-main .spin-sm {
-    width: 14px; height: 14px; border-radius: 50%;
-    border: 2px solid rgba(255,255,255,.3); border-top-color: #fff;
-    animation: spin .8s linear infinite; display: none;
-  }
-  .btn-main.loading .spin-sm { display: inline-block; }
-  .btn-main.loading .ico { display: none; }
-  .btn-main .ico { font-size: 18px; line-height: 1; }
-  #btn-refresh {
-    width: 46px; height: 46px; padding: 0;
-    border-radius: 50%;
-    justify-content: center;
-    font-size: 20px;
-  }
-
   .status { color: #8fa5c7; font-size: 12px; margin-left: auto; font-family: ui-monospace, Menlo, monospace; }
-  .hint { color: #5c6f92; font-size: 11px; margin-top: 12px; line-height: 1.5; }
-  .hint code { background: rgba(255,255,255,.06); padding: 1px 6px; border-radius: 5px; color: #9be7ff; font-family: ui-monospace, Menlo, monospace; }
 
   @media (max-width: 560px) {
     .brand { flex-direction: column; align-items: flex-start; }
@@ -154,8 +112,6 @@
   </div>
 
   <div class="controls">
-    <input class="urlbox" id="url-box" type="text" readonly spellcheck="false" aria-label="Stream URL + token" />
-    <button class="btn-main" id="btn-refresh" aria-label="Refresh · Regenerate Token" title="Refresh · Regenerate Token"><span class="spin-sm"></span><span class="ico">🗘</span></button>
     <div class="status" id="status">Ready</div>
   </div>
 </div>
@@ -163,16 +119,14 @@
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
 <script>
   // Fresh signed LB2 master playlist URL (media host allows CORS *, no referer).
-  var DEFAULT_URL = "https://games1.elahmad.store/tv13_www_elahmad._lb2/index.m3u8?token=e5b81a172bbf095bb0b681ff495db96bc1da09f3-3f367b5448839109c998e86a8fcbcac2-1788208878-1788207078";
+  var DEFAULT_URL = "https://games1.elahmad.store/tv13_www_elahmad._lb2/index.m3u8?token=fbab54d411c065ada67fec4357fbc6d0fd1ff62d-e04ea7d571a7a7fae6fd146d3963bba8-1788209292-1788207492";
 
   var vid = document.getElementById('vid');
-  var btn = document.getElementById('btn-refresh');
   var statusEl = document.getElementById('status');
   var errSub = document.getElementById('err-sub');
   var ovlLoading = document.getElementById('ovl-loading');
   var ovlTap = document.getElementById('ovl-tap');
   var ovlError = document.getElementById('ovl-error');
-  var urlBox = document.getElementById('url-box');
   var currentUrl = null;
   var hls = null;
   var userActivated = false;
@@ -196,7 +150,6 @@
   function play(url) {
     if (!url) { overlays('error'); errSub.textContent = 'No stream URL.'; return; }
     currentUrl = url;
-    urlBox.value = url;
     overlays('loading');
     statusEl.textContent = 'Connecting…';
 
@@ -248,36 +201,6 @@
     statusEl.textContent = '● Live';
     var p = vid.play();
     if (p) p.catch(function(){});
-  });
-
-  function isPlayableM3u8(url) {
-    return fetch(url, { method: 'GET' }).then(function(res){
-      if (!res.ok) return false;
-      return res.text().then(function(t){ return t.trim().indexOf('#EXTM3U') === 0; });
-    }).catch(function(){ return false; });
-  }
-
-  // Refresh / regenerate token.
-  btn.addEventListener('click', async function(){
-    btn.disabled = true; btn.classList.add('loading');
-    statusEl.textContent = 'Regenerating token…';
-    // Only trust a freshly minted URL once it is verified to actually play.
-    var urlToUse = DEFAULT_URL;
-    try {
-      var res = await fetch('/api/token');
-      var ok = res.ok;
-      var data = ok ? await res.json() : null;
-      if (ok && data && data.url && await isPlayableM3u8(data.url)) {
-        urlToUse = data.url;
-        statusEl.textContent = 'Token renewed · ● Live';
-      } else {
-        statusEl.textContent = 'Fresh token rejected · using verified stream';
-      }
-    } catch (e) {
-      statusEl.textContent = 'Token service busy · using verified stream';
-    }
-    play(urlToUse);
-    btn.disabled = false; btn.classList.remove('loading');
   });
 
   // Autoplay to start (will show tap overlay if blocked).

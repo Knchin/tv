@@ -3,7 +3,7 @@ name: Auto-refresh LB2 token
 on:
   schedule:
     # LB2 tokens last ~30 min; refresh well before expiry.
-    - cron: "*/25 * * * *"
+    - cron: "*/20 * * * *"
   workflow_dispatch:
 
 concurrency:
