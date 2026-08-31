@@ -140,7 +140,6 @@
   // Hide the loading overlay once real frames start flowing.
   vid.addEventListener('playing', function(){
     overlays(null);
-    statusEl.textContent = '● Live';
   });
   vid.addEventListener('canplay', function(){
     if (!ovlError.hidden) return;
@@ -168,7 +167,7 @@
 
     if (vid.canPlayType('application/vnd.apple.mpegurl')) {
       vid.src = url;
-      vid.onloadedmetadata = function(){ overlays(null); statusEl.textContent = '● Live'; };
+      vid.onloadedmetadata = function(){ overlays(null); };
       vid.onerror = function(){ overlays('error'); errSub.textContent = 'Stream failed / expired.'; statusEl.textContent = 'Offline'; };
       startPlay();
       return;
@@ -187,7 +186,7 @@
       });
     } else {
       vid.src = url;
-      vid.onloadedmetadata = function(){ overlays(null); statusEl.textContent = '● Live'; };
+      vid.onloadedmetadata = function(){ overlays(null); };
       vid.onerror = function(){ overlays('error'); errSub.textContent = 'Stream failed / expired.'; statusEl.textContent = 'Offline'; };
       startPlay();
     }
@@ -198,7 +197,6 @@
     if (!currentUrl) return;
     userActivated = true;
     overlays('loading');
-    statusEl.textContent = '● Live';
     var p = vid.play();
     if (p) p.catch(function(){});
   });
