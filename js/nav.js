@@ -27,6 +27,7 @@ export function mountNav(activeId) {
     inner += `</nav>`;
 
     inner += `<div class="nav-actions">
+        <span data-theme-switch></span>
         <button class="nav-toggle btn" aria-label="Toggle menu" aria-expanded="false" aria-controls="mobile-menu">
           <span class="burger" aria-hidden="true"></span>
         </button>

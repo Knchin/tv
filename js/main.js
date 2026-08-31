@@ -5,6 +5,7 @@
 import { LivePlayer } from "./player.js";
 import { mountNav } from "./nav.js";
 import { channels, getGrid, getNowNext, getChannelUrl, supportedStreamIds } from "./data.js";
+import "./theme.js";
 
 mountNav("home");
 
