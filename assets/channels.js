@@ -15,8 +15,8 @@ window.CHANNELS = [
     name: "AlHadath",
     description: "AlHadath Live Stream (YouTube)",
     type: "youtube",
-    url: "https://www.youtube.com/embed/8c-yPig6tIw?autoplay=1&mute=1&controls=1&modestbranding=1&rel=0",
-    youtubeId: "8c-yPig6tIw",
+    url: "https://www.youtube.com/embed/live_stream?channel=UCYcogyJ0RBPHvfw3X-5L0bQ&autoplay=1&mute=1&controls=1&modestbranding=1&rel=0",
+    youtubeId: "UCYcogyJ0RBPHvfw3X-5L0bQ",
   },
 ];
 
