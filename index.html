@@ -17,19 +17,24 @@
 <script src="/assets/channels.js"></script>
 </head>
 <body>
-  <div class="wrap">
-    <header class="app-header">
-      <div class="logo">T</div>
-      <h1>Live Channels</h1>
-    </header>
+  <div class="home-layout">
+    <nav class="alpha-nav" id="alpha-nav" aria-label="Alphabet navigation" role="navigation"></nav>
 
-    <div class="channel-grid" id="channel-grid"></div>
+    <div class="wrap">
+      <header class="app-header">
+        <div class="logo">T</div>
+        <h1>Live Channels</h1>
+      </header>
+
+      <div class="channel-grid" id="channel-grid"></div>
+    </div>
   </div>
 
 <script>
   // Render channel cards grouped by country from the shared CHANNELS data.
   (function () {
     var grid = document.getElementById("channel-grid");
+    var alphaNav = document.getElementById("alpha-nav");
     var channels = window.CHANNELS || [];
     if (!channels.length) {
       grid.innerHTML = '<p style="color:#8fa5c7">No channels available.</p>';
@@ -51,10 +56,42 @@
     // Sort countries alphabetically
     var sortedCountries = Object.keys(byCountry).sort();
 
+    // Build alphabet navigation (A-Z + # for numeric/other)
+    var letters = ["#"].concat("ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""));
+    var alphaNavEl = document.getElementById("alpha-nav");
+
+    letters.forEach(function (letter) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = letter;
+      btn.setAttribute("data-letter", letter);
+      btn.setAttribute("aria-label", "Jump to " + (letter === "#" ? "numbers/symbols" : letter));
+      btn.addEventListener("click", function () {
+        var targetId = "country-" + (letter === "#" ? "other" : letter.toLowerCase());
+        var target = document.getElementById(targetId);
+        if (target) {
+          target.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      });
+      alphaNavEl.appendChild(btn);
+    });
+
+    // Sort countries alphabetically
+    var sortedCountries = Object.keys(byCountry).sort();
+
+    // Track section IDs for scroll spy
+    var sectionIds = [];
+
     sortedCountries.forEach(function (country) {
       var countryChannels = byCountry[country];
+      var firstChar = country.charAt(0).toUpperCase();
+      var letterGroup = /^[A-Z]$/.test(firstChar) ? firstChar : "#";
+      var sectionId = "country-" + (letterGroup === "#" ? "other" : letterGroup.toLowerCase());
+      sectionIds.push({ id: sectionId, letter: letterGroup });
+
       var section = document.createElement("div");
       section.className = "country-section";
+      section.id = sectionId;
 
       var header = document.createElement("div");
       header.className = "country-header";
@@ -86,6 +123,31 @@
       });
       section.appendChild(countryGrid);
       grid.appendChild(section);
+    });
+
+    // Scroll spy: highlight active letter in alpha nav
+    var alphaButtons = alphaNavEl.querySelectorAll("button[data-letter]");
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        var letter = entry.target.dataset.letterGroup;
+        if (!letter) return;
+        var btn = alphaNavEl.querySelector('button[data-letter="' + letter + '"]');
+        if (btn) {
+          if (entry.isIntersecting) {
+            btn.classList.add("active");
+          } else {
+            btn.classList.remove("active");
+          }
+        }
+      });
+    }, { rootMargin: "-80px 0px -60% 0px", threshold: 0.1 });
+
+    sectionIds.forEach(function (s) {
+      var el = document.getElementById(s.id);
+      if (el) {
+        el.dataset.letterGroup = s.letter;
+        observer.observe(el);
+      }
     });
   })();
 </script>
