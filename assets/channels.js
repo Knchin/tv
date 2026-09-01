@@ -7,7 +7,7 @@ window.CHANNELS = [
     description: "Live stream",
     // Fresh signed master playlist URL (media host allows CORS *, no referer).
     url:
-      "https://games1.elahmad.store/tv13_www_elahmad._lb2/index.m3u8?token=2f3fd5c71f3c8bc3250daeeef9700bc671af75d2-49e0c0ae7e27597dfd6e8ad0b3ceb9e8-1788217447-1788215647",
+      "https://games1.elahmad.store/tv14_www_elahmad._lb2/index.m3u8?token=99a42818f7c5e2d441e350d963325ea5024fb1da-8c0d2a0f2c05a9c5d939ea3f9b3dc19c-1788292767-1788290967",
   },
 ];
 
