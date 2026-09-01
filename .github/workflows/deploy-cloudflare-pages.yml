@@ -27,9 +27,6 @@ jobs:
       - name: Install Wrangler
         run: npm install -g wrangler@3.114.17
 
-      - name: Mint fresh stream token
-        run: node scripts/mint-token.mjs
-
       - name: Prepare static assets
         run: |
           mkdir -p dist
