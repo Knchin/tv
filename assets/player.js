@@ -6,6 +6,7 @@
   function initPlayer() {
     var channel = window.ACTIVE_CHANNEL;
     var DEFAULT_URL = channel && channel.url ? channel.url : "";
+    var channelType = channel && channel.type ? channel.type : "hls";
 
     var vid = document.getElementById("vid");
     var btn = document.getElementById("btn-refresh");
@@ -16,11 +17,43 @@
     var currentUrl = null;
     var hls = null;
     var userActivated = false;
+    var youtubeIframe = null;
 
     function overlays(show) {
       ovlLoading.hidden = show !== "loading";
       ovlTap.hidden = show !== "tap";
       ovlError.hidden = show !== "error";
+    }
+
+    function hideVideoPlayer() {
+      if (vid) vid.style.display = "none";
+    }
+
+    function showVideoPlayer() {
+      if (vid) vid.style.display = "";
+    }
+
+    function loadYouTubeEmbed(url) {
+      hideVideoPlayer();
+      if (youtubeIframe) {
+        youtubeIframe.remove();
+      }
+      var playerDiv = document.querySelector(".player");
+      if (!playerDiv) return;
+      youtubeIframe = document.createElement("iframe");
+      youtubeIframe.src = url;
+      youtubeIframe.style.cssText = "position:absolute;inset:0;width:100%;height:100%;border:none;background:#000;";
+      youtubeIframe.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen";
+      youtubeIframe.allowFullscreen = true;
+      youtubeIframe.onload = function () {
+        overlays(null);
+      };
+      youtubeIframe.onerror = function () {
+        overlays("error");
+        errSub.textContent = "Failed to load YouTube embed.";
+      };
+      playerDiv.appendChild(youtubeIframe);
+      overlays(null);
     }
 
     // Hide the loading overlay once real frames start flowing.
@@ -47,15 +80,18 @@
         } catch (e) {}
         hls = null;
       }
+      if (youtubeIframe) {
+        youtubeIframe.remove();
+        youtubeIframe = null;
+      }
       vid.pause();
       vid.removeAttribute("src");
       try {
         vid.load();
       } catch (e) {}
+      showVideoPlayer();
 
       function startPlay() {
-        // Start muted so autoplay isn't blocked by the browser (muted autoplay
-        // is allowed). The user can unmute via the player controls.
         vid.muted = true;
         var p = vid.play();
         if (p)
@@ -66,6 +102,12 @@
               overlays("tap");
             }
           });
+      }
+
+      // YouTube embed type - use iframe instead of hls.js
+      if (channelType === "youtube") {
+        loadYouTubeEmbed(url);
+        return;
       }
 
       if (vid.canPlayType("application/vnd.apple.mpegurl")) {
