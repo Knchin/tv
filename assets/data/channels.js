@@ -204,16 +204,17 @@ function parseCountry(description) {
   return 'Other';
 }
 
-// Build channel data from raw channels
+// Build channel data from raw channels - supports both old format (parse from description) and new format (explicit fields)
 function buildChannelData(rawChannels) {
   const existingSlugs = new Set();
   const channels = [];
   
   for (const raw of rawChannels) {
-    const country = parseCountry(raw.description);
-    const countryCode = COUNTRY_CODES[country] || 'XX';
-    const category = inferCategory(raw.name, raw.description);
-    const slug = generateUniqueSlug(raw.name, existingSlugs);
+    // Support both old format (parse from description) and new format (explicit fields)
+    const country = raw.country || parseCountry(raw.description);
+    const countryCode = raw.countryCode || COUNTRY_CODES[country] || 'XX';
+    const category = raw.category || inferCategory(raw.name, raw.description);
+    const slug = raw.slug || generateUniqueSlug(raw.name, existingSlugs);
     
     channels.push({
       id: raw.id,
