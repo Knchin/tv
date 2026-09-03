@@ -339,7 +339,7 @@ function initializeChannelData() {
 }
 
 // Initialize when DOM is ready (ensures window.CHANNELS is defined)
-// Initialize when DOM is ready (ensures window.CHANNELS is defined)
+// Initialize synchronously if CHANNELS is already available, otherwise wait
 function waitForChannelsAndInit() {
   // Check immediately first
   if (window.CHANNELS && window.CHANNELS.length > 0) {
@@ -362,7 +362,10 @@ function waitForChannelsAndInit() {
   }, 5000);
 }
 
-if (document.readyState === 'loading') {
+// Initialize synchronously if possible, otherwise wait
+if (window.CHANNELS && window.CHANNELS.length > 0) {
+  initializeChannelData();
+} else if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', waitForChannelsAndInit);
 } else {
   waitForChannelsAndInit();
