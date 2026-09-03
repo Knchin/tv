@@ -42,6 +42,7 @@
   let currentFilters = { search: '', country: 'all', category: 'all' };
   let searchDebounceTimer = null;
   let isSearchOpen = false;
+  let dataLayerReady = false;
 
   // Initialize
   function init() {
@@ -63,6 +64,38 @@
     // Load persisted data
     loadPersistedData();
   }
+
+  // Wait for data layer to be ready
+  function waitForDataLayer() {
+    if (window.ChannelData && window.ChannelData.channels && window.ChannelData.channels.length > 0) {
+      init();
+      return;
+    }
+    
+    // Wait for channeldata:ready event
+    window.addEventListener('channeldata:ready', function onDataReady() {
+      window.removeEventListener('channeldata:ready', onDataReady);
+      init();
+    });
+    
+    // Fallback: check periodically
+    const checkInterval = setInterval(() => {
+      if (window.ChannelData && window.ChannelData.channels && window.ChannelData.channels.length > 0) {
+        clearInterval(checkInterval);
+        init();
+      }
+    }, 50);
+    
+    // Fallback timeout
+    setTimeout(() => {
+      clearInterval(checkInterval);
+      // Try anyway with whatever we have
+      init();
+    }, 5000);
+  }
+
+  // Initialize
+  waitForDataLayer();
 
   function populateFilters() {
     // Populate country filter
@@ -423,11 +456,7 @@
       }
     );
 
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', init);
-    } else {
-      init();
-    }
+    waitForDataLayer();
   })();
 </script>
 
