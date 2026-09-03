@@ -339,8 +339,30 @@ function initializeChannelData() {
 }
 
 // Initialize when DOM is ready (ensures window.CHANNELS is defined)
+// Initialize when DOM is ready (ensures window.CHANNELS is defined)
+function waitForChannelsAndInit() {
+  if (window.CHANNELS && window.CHANNELS.length > 0) {
+    initializeChannelData();
+  } else {
+    // Wait for CHANNELS to be defined
+    const checkInterval = setInterval(() => {
+      if (window.CHANNELS && window.CHANNELS.length > 0) {
+        clearInterval(checkInterval);
+        initializeChannelData();
+      }
+    }, 50);
+    
+    // Fallback timeout
+    setTimeout(() => {
+      clearInterval(checkInterval);
+      // Try anyway with whatever we have
+      initializeChannelData();
+    }, 5000);
+  }
+}
+
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializeChannelData);
+  document.addEventListener('DOMContentLoaded', waitForChannelsAndInit);
 } else {
-  initializeChannelData();
+  waitForChannelsAndInit();
 }
