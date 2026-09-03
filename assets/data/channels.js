@@ -344,20 +344,24 @@ function waitForChannelsAndInit() {
   if (window.CHANNELS && window.CHANNELS.length > 0) {
     initializeChannelData();
   } else {
-    // Wait for CHANNELS to be defined
+    // Wait for CHANNELS to be defined - check immediately first
+    if (window.CHANNELS && window.CHANNELS.length > 0) {
+      initializeChannelData();
+      return;
+    }
+    // Wait for CHANNELS to be defined - poll with longer interval
     const checkInterval = setInterval(() => {
       if (window.CHANNELS && window.CHANNELS.length > 0) {
         clearInterval(checkInterval);
         initializeChannelData();
       }
-    }, 50);
+    }, 100);
     
-    // Fallback timeout
+    // Fallback timeout - try anyway after 3 seconds
     setTimeout(() => {
       clearInterval(checkInterval);
-      // Try anyway with whatever we have
       initializeChannelData();
-    }, 5000);
+    }, 3000);
   }
 }
 
