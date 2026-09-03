@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 180">
+  <rect width="500" height="180" fill="none"/>
+
+  <!-- Arabic text -->
+  <text x="245" y="105"
+        text-anchor="middle"
+        direction="rtl"
+        font-family="serif"
+        font-size="62"
+        fill="#111">
+    نور
+  </text>
+
+  <!-- Butterfly logo -->
+  <g transform="translate(365 88)"
+     fill="none"
+     stroke="#111"
+     stroke-width="3"
+     stroke-linecap="round"
+     stroke-linejoin="round">
+
+    <!-- left upper wing -->
+    <path d="M0 0
+             C-18 -32,-42 -38,-38 -8
+             C-35 12,-17 18,0 8Z"/>
+
+    <!-- left lower wing -->
+    <path d="M0 8
+             C-20 10,-34 28,-20 34
+             C-7 39,0 24,3 10Z"/>
+
+    <!-- right upper wing -->
+    <path d="M3 0
+             C20 -32,43 -38,39 -8
+             C36 12,18 18,3 8Z"/>
+
+    <!-- right lower wing -->
+    <path d="M3 8
+             C21 10,35 28,21 34
+             C8 39,3 24,0 10Z"/>
+
+    <!-- body -->
+    <path d="M1 -9 C-2 2,-2 19,2 31"/>
+
+    <!-- antennae -->
+    <path d="M0 -8 C-8 -19,-12 -25,-20 -28"/>
+    <path d="M3 -8 C11 -19,15 -25,23 -28"/>
+
+    <!-- wing details -->
+    <path d="M-30 -20 C-22 -14,-15 -8,-8 -3"/>
+    <path d="M30 -20 C22 -14,15 -8,8 -3"/>
+    <path d="M-25 22 C-16 18,-9 13,-3 9"/>
+    <path d="M27 22 C18 18,11 13,4 9"/>
+  </g>
+</svg>
+
