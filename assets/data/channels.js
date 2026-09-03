@@ -341,5 +341,22 @@ function initializeChannelData() {
   window.dispatchEvent(new CustomEvent('channeldata:ready'));
 }
 
-// Initialize immediately - window.CHANNELS should be available since channels.js loads first with defer
-initializeChannelData();
+// Initialize synchronously with a small delay to ensure window.CHANNELS is fully parsed
+// Since channels.js loads first with defer, it should be ready, but add a tiny delay as safety
+if (window.CHANNELS && window.CHANNELS.length > 0) {
+  initializeChannelData();
+} else {
+  // Fallback: wait for CHANNELS to be populated
+  const checkInterval = setInterval(() => {
+    if (window.CHANNELS && window.CHANNELS.length > 0) {
+      clearInterval(checkInterval);
+      initializeChannelData();
+    }
+  }, 10);
+  
+  setTimeout(() => {
+    clearInterval(checkInterval);
+    if (!window.ChannelData || !window.ChannelData.channels || window.ChannelData.channels.length === 0) {
+      initializeChannelData();
+    }
+  }, 100);
