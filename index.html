@@ -105,8 +105,9 @@
   </div>
 
 <script>
-  // Home page application logic
-  (function () {
+  // Home page application logic - wait for data layer to initialize
+  document.addEventListener('DOMContentLoaded', function () {
+    (function () {
     // DOM Elements
     const grid = document.getElementById("channel-grid");
     const alphaNavEl = document.getElementById("alpha-nav");
@@ -637,6 +638,7 @@
       init();
     }
   })();
+  });
 </script>
 
 <script>
