@@ -104,10 +104,8 @@
     </div>
   </div>
 
-<script>
-  // Home page application logic - wait for data layer to initialize
-  document.addEventListener('DOMContentLoaded', function () {
-    (function () {
+<script src="/assets/home.js" defer></script>
+</head>
     // DOM Elements
     const grid = document.getElementById("channel-grid");
     const alphaNavEl = document.getElementById("alpha-nav");
@@ -637,11 +635,7 @@
     } else {
       init();
     }
-  })();
-  });
-</script>
-
-<script>
+  <script>
   // Register the service worker for PWA installability + app-shell caching.
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", function () {
