@@ -321,7 +321,7 @@ window.ChannelData = {
   filterChannels
 };
 
-// Build and expose channels when DOM is ready
+// Initialize synchronously - window.CHANNELS should be available since channels.js loads first with defer
 function initializeChannelData() {
   // Load raw channels from the existing channels array
   const rawChannels = window.CHANNELS || [];
@@ -336,37 +336,10 @@ function initializeChannelData() {
   window.ChannelData.findBySlug = (slug) => channels.find(c => c.slug === slug);
   window.ChannelData.findById = (id) => channels.find(c => c.id === id);
   window.ChannelData.getAll = () => channels;
+  
+  // Dispatch event to notify that data is ready
+  window.dispatchEvent(new CustomEvent('channeldata:ready'));
 }
 
-// Initialize when DOM is ready (ensures window.CHANNELS is defined)
-// Initialize synchronously if CHANNELS is already available, otherwise wait
-function waitForChannelsAndInit() {
-  // Check immediately first
-  if (window.CHANNELS && window.CHANNELS.length > 0) {
-    initializeChannelData();
-    return;
-  }
-  
-  // Wait for CHANNELS to be defined - poll every 50ms
-  const checkInterval = setInterval(() => {
-    if (window.CHANNELS && window.CHANNELS.length > 0) {
-      clearInterval(checkInterval);
-      initializeChannelData();
-    }
-  }, 50);
-  
-  // Fallback timeout - try anyway after 5 seconds
-  setTimeout(() => {
-    clearInterval(checkInterval);
-    initializeChannelData();
-  }, 5000);
-}
-
-// Initialize synchronously if possible, otherwise wait
-if (window.CHANNELS && window.CHANNELS.length > 0) {
-  initializeChannelData();
-} else if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', waitForChannelsAndInit);
-} else {
-  waitForChannelsAndInit();
-}
+// Initialize immediately - window.CHANNELS should be available since channels.js loads first with defer
+initializeChannelData();
