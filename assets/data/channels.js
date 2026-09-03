@@ -321,8 +321,8 @@ window.ChannelData = {
   filterChannels
 };
 
-// Build and expose channels
-(function() {
+// Build and expose channels when DOM is ready
+function initializeChannelData() {
   // Load raw channels from the existing channels array
   const rawChannels = window.CHANNELS || [];
   const channels = buildChannelData(rawChannels);
@@ -336,4 +336,11 @@ window.ChannelData = {
   window.ChannelData.findBySlug = (slug) => channels.find(c => c.slug === slug);
   window.ChannelData.findById = (id) => channels.find(c => c.id === id);
   window.ChannelData.getAll = () => channels;
-})();
+}
+
+// Initialize when DOM is ready (ensures window.CHANNELS is defined)
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeChannelData);
+} else {
+  initializeChannelData();
+}
