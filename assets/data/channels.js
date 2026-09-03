@@ -341,28 +341,25 @@ function initializeChannelData() {
 // Initialize when DOM is ready (ensures window.CHANNELS is defined)
 // Initialize when DOM is ready (ensures window.CHANNELS is defined)
 function waitForChannelsAndInit() {
+  // Check immediately first
   if (window.CHANNELS && window.CHANNELS.length > 0) {
     initializeChannelData();
-  } else {
-    // Wait for CHANNELS to be defined - check immediately first
+    return;
+  }
+  
+  // Wait for CHANNELS to be defined - poll every 50ms
+  const checkInterval = setInterval(() => {
     if (window.CHANNELS && window.CHANNELS.length > 0) {
-      initializeChannelData();
-      return;
-    }
-    // Wait for CHANNELS to be defined - poll with longer interval
-    const checkInterval = setInterval(() => {
-      if (window.CHANNELS && window.CHANNELS.length > 0) {
-        clearInterval(checkInterval);
-        initializeChannelData();
-      }
-    }, 100);
-    
-    // Fallback timeout - try anyway after 3 seconds
-    setTimeout(() => {
       clearInterval(checkInterval);
       initializeChannelData();
-    }, 3000);
-  }
+    }
+  }, 50);
+  
+  // Fallback timeout - try anyway after 5 seconds
+  setTimeout(() => {
+    clearInterval(checkInterval);
+    initializeChannelData();
+  }, 5000);
 }
 
 if (document.readyState === 'loading') {
