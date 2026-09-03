@@ -360,3 +360,4 @@ if (window.CHANNELS && window.CHANNELS.length > 0) {
       initializeChannelData();
     }
   }, 100);
+}

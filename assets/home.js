@@ -7,34 +7,20 @@
   const searchFilterBar = document.getElementById("search-filter-bar");
   const searchInput = document.getElementById("search-input");
   const searchClear = document.getElementById("search-clear");
-  const countryFilter = document.getElementById("country-filter");
-  const categoryFilter = document.getElementById("category-filter");
-  const resultsInfo = document.getElementById("results-info");
-  const resultsCount = document.getElementById("results-count");
-  const clearFilters = document.getElementById("clear-filters");
-  const clearFiltersBtn = document.getElementById("clear-filters");
-  const noResults = document.getElementById("no-results");
-  const alphaNavEl = document.getElementById("alpha-nav");
-  const recentlyWatchedGrid = document.getElementById("recently-watched-grid");
-  const favoritesGrid = document.getElementById("favorites-grid");
-  const recentlyWatchedSection = document.getElementById("recently-watched");
-  const favoritesSection = document.getElementById("favorites");
-  const noResultsEl = document.getElementById("no-results");
-  const resultsInfoEl = document.getElementById("results-info");
-  const resultsCountEl = document.getElementById("results-count");
   const countryFilterEl = document.getElementById("country-filter");
   const categoryFilterEl = document.getElementById("category-filter");
+  const resultsInfoEl = document.getElementById("results-info");
+  const resultsCountEl = document.getElementById("results-count");
+  const clearFiltersBtn = document.getElementById("clear-filters");
+  const noResultsEl = document.getElementById("no-results");
+  const recentlyWatchedGridEl = document.getElementById("recently-watched-grid");
+  const favoritesGridEl = document.getElementById("favorites-grid");
   const recentlyWatchedSectionEl = document.getElementById("recently-watched");
   const favoritesSectionEl = document.getElementById("favorites");
   const allChannelsSection = document.getElementById("all-channels");
-  const searchToggle = document.getElementById("search-toggle");
   const searchFilterBarEl = document.getElementById("search-filter-bar");
   const searchInputEl = document.getElementById("search-input");
   const searchClearBtn = document.getElementById("search-clear");
-  const clearFiltersEl = document.getElementById("clear-filters");
-  const recentlyWatchedGridEl = document.getElementById("recently-watched-grid");
-  const favoritesGridEl = document.getElementById("favorites-grid");
-  const noResultsEl2 = document.getElementById("no-results");
 
   // State
   let allChannels = [];
@@ -42,26 +28,18 @@
   let currentFilters = { search: '', country: 'all', category: 'all' };
   let searchDebounceTimer = null;
   let isSearchOpen = false;
-  let dataLayerReady = false;
 
   // Initialize
   function init() {
-    // Load channels from data layer
     allChannels = window.ChannelData.getAll() || [];
-    
-    // Populate filters
+
     populateFilters();
-    
-    // Render initial state
     renderRecentlyWatched();
     renderFavorites();
     renderAllChannels();
     buildAlphaNav();
-    
-    // Setup event listeners
+
     setupEventListeners();
-    
-    // Load persisted data
     loadPersistedData();
   }
 
@@ -71,25 +49,22 @@
       init();
       return;
     }
-    
-    // Wait for channeldata:ready event
-    window.addEventListener('channeldata:ready', function onDataReady() {
+
+    const onDataReady = function () {
       window.removeEventListener('channeldata:ready', onDataReady);
       init();
-    });
-    
-    // Fallback: check periodically
+    };
+    window.addEventListener('channeldata:ready', onDataReady);
+
     const checkInterval = setInterval(() => {
       if (window.ChannelData && window.ChannelData.channels && window.ChannelData.channels.length > 0) {
         clearInterval(checkInterval);
         init();
       }
     }, 50);
-    
-    // Fallback timeout
+
     setTimeout(() => {
       clearInterval(checkInterval);
-      // Try anyway with whatever we have
       init();
     }, 5000);
   }
@@ -98,23 +73,21 @@
   waitForDataLayer();
 
   function populateFilters() {
-    // Populate country filter
     const countries = window.ChannelData.countries || [];
     countryFilterEl.innerHTML = '<option value="all">All Countries</option>';
     countries.forEach(country => {
       const option = document.createElement('option');
       option.value = country.name;
-      option.textContent = `${country.name} (${country.count})`;
+      option.textContent = country.name + ' (' + country.count + ')';
       countryFilterEl.appendChild(option);
     });
 
-    // Populate category filter
     const categories = window.ChannelData.categories || [];
     categoryFilterEl.innerHTML = '<option value="all">All Categories</option>';
     categories.forEach(cat => {
       const option = document.createElement('option');
       option.value = cat.name;
-      option.textContent = `${cat.name} (${cat.count})`;
+      option.textContent = cat.name + ' (' + cat.count + ')';
       categoryFilterEl.appendChild(option);
     });
   }
@@ -122,7 +95,7 @@
   function buildAlphaNav() {
     const letters = ["#"].concat("ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""));
     alphaNavEl.innerHTML = '';
-    
+
     letters.forEach(letter => {
       const btn = document.createElement("button");
       btn.type = "button";
@@ -140,49 +113,47 @@
     });
   }
 
-  function renderChannels(channels, container, options) {
-    if (!container) return;
-    
-    if (!channels.length) {
-      container.innerHTML = '<p style="color:#8fa5c7; text-align: center; padding: 20px;">No channels available.</p>';
-      return;
-    }
+  function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    const div = document.createElement('div');
+    div.textContent = String(text);
+    return div.innerHTML;
+  }
 
-    const { showCountry = true, showCategory = true, maxItems } = options || {};
-    
-    container.innerHTML = '';
-    const channelsToRender = maxItems ? channels.slice(0, maxItems) : channels;
-    
-    channelsToRender.forEach(c => {
-      const card = document.createElement("a");
-      card.className = "channel-card";
-      card.href = "/channel/" + encodeURIComponent(c.slug) + "/";
-      card.setAttribute("aria-label", "Watch " + c.name);
-      card.dataset.channelId = c.id;
-      card.dataset.channelSlug = c.slug;
+  function buildCard(c) {
+    const card = document.createElement("a");
+    card.className = "channel-card";
+    card.href = "/channel/" + encodeURIComponent(c.slug) + "/";
+    card.setAttribute("aria-label", "Watch " + c.name);
+    card.dataset.channelId = c.id;
+    card.dataset.channelSlug = c.slug;
 
-      const isFav = isFavorite(c.id);
-      const favIcon = isFav 
-        ? '<svg class="fav-icon active" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path></svg>'
-        : '<svg class="fav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>';
+    const isFav = isFavorite(c.id);
+    const favIcon = isFav
+      ? '<svg class="fav-icon active" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path></svg>'
+      : '<svg class="fav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>';
 
-      card.innerHTML = 
-        '<div class="channel-thumb">' +
-          '<span class="badge"><span class="dot"></span> LIVE</span>' +
-          '<div class="channel-logo-placeholder">' + c.name.charAt(0) + '</div>' +
-        "</div>" +
-        '<div class="channel-info">' +
-          "<h2>" + escapeHtml(c.name) + "</h2>" +
-          "<p>" + (showCountry ? escapeHtml(c.country) : '') + (showCountry && showCategory ? ' · ' : '') + (showCategory ? escapeHtml(c.category) : '') + "</p>" +
-        "</div>" +
-        '<div class="channel-actions">' +
-          '<button class="fav-btn" data-channel-id="' + c.id + '" aria-label="' + (isFav ? 'Remove from favorites' : 'Add to favorites') + '">' + favIcon + '</button>' +
-          '<span class="channel-cta">Watch Live →</span>' +
-        '</div>';
+    card.innerHTML =
+      '<div class="channel-thumb">' +
+        '<span class="badge"><span class="dot"></span> LIVE</span>' +
+        '<div class="channel-logo-placeholder">' + escapeHtml(c.name.charAt(0)) + '</div>' +
+      "</div>" +
+      '<div class="channel-info">' +
+        "<h2>" + escapeHtml(c.name) + "</h2>" +
+      "</div>" +
+      '<div class="channel-actions">' +
+        '<button class="fav-btn" data-channel-id="' + eid(c.id) + '" aria-label="' + (isFav ? 'Remove from favorites' : 'Add to favorites') + '">' + favIcon + '</button>' +
+        '<span class="channel-cta">Watch Live</span>' +
+      '</div>';
 
-      container.appendChild(card);
-    });
+    return card;
+  }
 
+  function eid(id) {
+    return typeof id === 'string' ? id.replace(/"/g, '&quot;') : id;
+  }
+
+  function attachFavHandlers(container) {
     container.querySelectorAll('.fav-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -192,12 +163,36 @@
     });
   }
 
+  function renderChannels(channels, container, options) {
+    if (!container) return;
+
+    if (!channels.length) {
+      container.innerHTML = '<p style="color:#8fa5c7; text-align:center; padding:20px;">No channels available.</p>';
+      return;
+    }
+
+    const { showCountry = true, showCategory = true, maxItems } = options || {};
+
+    container.innerHTML = '';
+    const channelsToRender = maxItems ? channels.slice(0, maxItems) : channels;
+
+    channelsToRender.forEach(c => {
+      const card = buildCard(c);
+      if (showCountry || showCategory) {
+        const p = document.createElement("p");
+        p.textContent = (showCountry ? c.country : '') + (showCountry && showCategory ? ' · ' : '') + (showCategory ? c.category : '');
+        card.querySelector('.channel-info').appendChild(p);
+      }
+      container.appendChild(card);
+    });
+
+    attachFavHandlers(container);
+  }
+
   function renderAllChannels() {
     filteredChannels = window.ChannelData.filterChannels(allChannels, currentFilters);
-    renderChannels(filteredChannels, grid);
     buildCountrySections();
     buildAlphaNav();
-    
     updateResultsInfo();
   }
 
@@ -217,7 +212,7 @@
       const firstChar = country.charAt(0).toUpperCase();
       const letterGroup = /^[A-Z]$/.test(firstChar) ? firstChar : "#";
       const sectionId = "country-" + (letterGroup === "#" ? "other" : letterGroup.toLowerCase());
-      
+
       const section = document.createElement("div");
       section.className = "country-section";
       section.id = sectionId;
@@ -232,54 +227,22 @@
       const countryGrid = document.createElement("div");
       countryGrid.className = "channel-grid";
       countryChannels.forEach(c => {
-        const card = document.createElement("a");
-        card.className = "channel-card";
-        card.href = "/channel/" + encodeURIComponent(c.slug) + "/";
-        card.setAttribute("aria-label", "Watch " + c.name);
-        card.dataset.channelId = c.id;
-        card.dataset.channelSlug = c.slug;
-
-        const isFav = isFavorite(c.id);
-        const favIcon = isFav 
-          ? '<svg class="fav-icon active" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path></svg>'
-          : '<svg class="fav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>';
-
-        card.innerHTML = 
-          '<div class="channel-thumb">' +
-            '<span class="badge"><span class="dot"></span> LIVE</span>' +
-            '<div class="channel-logo-placeholder">' + c.name.charAt(0) + '</div>' +
-          "</div>" +
-          '<div class="channel-info">' +
-            "<h2>" + escapeHtml(c.name) + "</h2>" +
-            "<p>" + escapeHtml(c.country) + ' · ' + escapeHtml(c.category) + "</p>" +
-          "</div>" +
-          '<div class="channel-actions">' +
-            '<button class="fav-btn" data-channel-id="' + c.id + '" aria-label="' + (isFav ? 'Remove from favorites' : 'Add to favorites') + '">' + favIcon + '</button>' +
-            '<span class="channel-cta">Watch Live →</span>' +
-          '</div>';
-
-        countryGrid.appendChild(card);
+        countryGrid.appendChild(buildCard(c));
       });
       section.appendChild(countryGrid);
       grid.appendChild(section);
-      
+
       sectionIds.push({ id: sectionId, letter: firstChar });
     });
 
-    grid.querySelectorAll('.fav-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        toggleFavorite(btn.dataset.channelId);
-      });
-    });
+    attachFavHandlers(grid);
 
     setupScrollSpy(sectionIds);
   }
 
   function setupScrollSpy(sectionIds) {
-    const alphaButtons = alphaNavEl.querySelectorAll("button[data-letter]");
-    
+    if (typeof IntersectionObserver === 'undefined') return;
+
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         const letter = entry.target.dataset.letterGroup;
@@ -300,13 +263,13 @@
       if (el) {
         el.dataset.letterGroup = s.letter;
         observer.observe(el);
-      });
+      }
     });
   }
 
   function renderRecentlyWatched() {
     const recent = getRecentlyWatched();
-    if (recent.length === 0) {
+    if (!recent.length) {
       recentlyWatchedSectionEl.hidden = true;
       return;
     }
@@ -316,7 +279,7 @@
 
   function renderFavorites() {
     const favs = getFavorites();
-    if (favs.length === 0) {
+    if (!favs.length) {
       favoritesSectionEl.hidden = true;
       return;
     }
@@ -327,11 +290,10 @@
   function updateResultsInfo() {
     const count = filteredChannels.length;
     resultsCountEl.textContent = count;
-    resultsInfoEl.hidden = (currentFilters.search === '' && currentFilters.country === 'all' && currentFilters.category === 'all');
-    noResultsEl.hidden = count > 0;
-    allChannelsSection.hidden = count === 0 && (currentFilters.search || currentFilters.country !== 'all' || currentFilters.category !== 'all');
-    
     const hasFilters = currentFilters.search || currentFilters.country !== 'all' || currentFilters.category !== 'all';
+    resultsInfoEl.hidden = !hasFilters;
+    noResultsEl.hidden = count > 0;
+    allChannelsSection.hidden = count === 0 && hasFilters;
     clearFiltersBtn.hidden = !hasFilters;
   }
 
@@ -394,6 +356,13 @@
       }
     });
 
+    document.addEventListener('click', (e) => {
+      const card = e.target.closest('.channel-card');
+      if (card && card.dataset.channelSlug) {
+        addToRecentlyWatched(card.dataset.channelId);
+      }
+    });
+
     document.addEventListener('keydown', (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
@@ -404,7 +373,7 @@
           searchInputEl.focus();
         }
       }
-      
+
       if (e.key === 'Escape') {
         if (isSearchOpen) {
           isSearchOpen = false;
@@ -415,59 +384,91 @@
       }
     });
 
-    document.addEventListener('click', (e) => {
-      const favBtn = e.target.closest('.fav-btn');
-      if (favBtn) {
-        e.preventDefault();
-        e.stopPropagation();
-        toggleFavorite(favBtn.dataset.channelId);
-      }
-    });
-
     let currentChannelIndex = -1;
-    
-    function getChannelIndex(slug) {
-      return allChannels.findIndex(c => c.slug === slug);
-    }
 
     document.addEventListener('keydown', (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
-      
+
       if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
         e.preventDefault();
-        
         if (e.key === 'ArrowUp') {
           currentChannelIndex = Math.max(0, currentChannelIndex - 1);
         } else {
           currentChannelIndex = Math.min(allChannels.length - 1, currentChannelIndex + 1);
         }
-        
         const channel = allChannels[currentChannelIndex];
         if (channel) {
           window.location.href = '/channel/' + encodeURIComponent(channel.slug) + '/';
         }
       }
-      
+
       if (e.key >= '1' && e.key <= '9') {
-        const index = parseInt(e.key) - 1;
+        const index = parseInt(e.key, 10) - 1;
         if (index < filteredChannels.length) {
           window.location.href = '/channel/' + encodeURIComponent(filteredChannels[index].slug) + '/';
         }
       }
-    );
-
-    waitForDataLayer();
-  })();
-</script>
-
-<script>
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", function () {
-      navigator.serviceWorker.register("/sw.js").catch(function (err) {
-        console.error("SW registration failed:", err);
-      });
     });
   }
-</script>
-</body>
-</html>
+
+  // Persistence functions
+  function getFavorites() {
+    try {
+      const stored = localStorage.getItem('tv-favorites');
+      return stored ? JSON.parse(stored) : [];
+    } catch (e) { return []; }
+  }
+
+  function isFavorite(channelId) {
+    return getFavorites().some(f => f.id === channelId);
+  }
+
+  function toggleFavorite(channelId) {
+    const channel = allChannels.find(c => c.id === channelId);
+    if (!channel) return;
+
+    const favs = getFavorites();
+    const index = favs.findIndex(f => f.id === channelId);
+
+    if (index >= 0) {
+      favs.splice(index, 1);
+    } else {
+      favs.unshift({ id: channelId, name: channel.name, slug: channel.slug, addedAt: Date.now() });
+    }
+
+    localStorage.setItem('tv-favorites', JSON.stringify(favs));
+
+    renderAllChannels();
+    renderFavorites();
+    renderRecentlyWatched();
+  }
+
+  function getRecentlyWatched() {
+    try {
+      const stored = localStorage.getItem('tv-recent');
+      return stored ? JSON.parse(stored) : [];
+    } catch (e) { return []; }
+  }
+
+  function addToRecentlyWatched(channelId) {
+    const channel = allChannels.find(c => c.id === channelId);
+    if (!channel) return;
+
+    let recent = getRecentlyWatched();
+    recent = recent.filter(r => r.id !== channelId);
+    recent.unshift({ id: channelId, name: channel.name, slug: channel.slug, watchedAt: Date.now() });
+    recent = recent.slice(0, 20);
+
+    localStorage.setItem('tv-recent', JSON.stringify(recent));
+    renderRecentlyWatched();
+  }
+
+  function loadPersistedData() {
+    try {
+      const lastChannel = localStorage.getItem('tv-last-channel');
+      if (lastChannel) {
+        // Could auto-play or show suggestion
+      }
+    } catch (e) {}
+  }
+})();
