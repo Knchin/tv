@@ -2,7 +2,6 @@
 (function () {
   // DOM Elements
   const grid = document.getElementById("channel-grid");
-  const alphaNavEl = document.getElementById("alpha-nav");
   const searchToggle = document.getElementById("search-toggle");
   const searchFilterBar = document.getElementById("search-filter-bar");
   const searchInput = document.getElementById("search-input");
@@ -37,7 +36,6 @@
     renderRecentlyWatched();
     renderFavorites();
     renderAllChannels();
-    buildAlphaNav();
 
     setupEventListeners();
     loadPersistedData();
@@ -89,27 +87,6 @@
       option.value = cat.name;
       option.textContent = cat.name + ' (' + cat.count + ')';
       categoryFilterEl.appendChild(option);
-    });
-  }
-
-  function buildAlphaNav() {
-    const letters = ["#"].concat("ABCDEFGHIJKLMNOPQRSTUVWXYZ".split(""));
-    alphaNavEl.innerHTML = '';
-
-    letters.forEach(letter => {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.textContent = letter;
-      btn.setAttribute("data-letter", letter);
-      btn.setAttribute("aria-label", "Jump to " + (letter === "#" ? "numbers/symbols" : letter));
-      btn.addEventListener("click", function () {
-        const targetId = "country-" + (letter === "#" ? "other" : letter.toLowerCase());
-        const target = document.getElementById(targetId);
-        if (target) {
-          target.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-      });
-      alphaNavEl.appendChild(btn);
     });
   }
 
@@ -191,80 +168,8 @@
 
   function renderAllChannels() {
     filteredChannels = window.ChannelData.filterChannels(allChannels, currentFilters);
-    buildCountrySections();
-    buildAlphaNav();
+    renderChannels(filteredChannels, grid, { showCountry: true, showCategory: true });
     updateResultsInfo();
-  }
-
-  function buildCountrySections() {
-    const byCountry = {};
-    filteredChannels.forEach(c => {
-      if (!byCountry[c.country]) byCountry[c.country] = [];
-      byCountry[c.country].push(c);
-    });
-
-    const sortedCountries = Object.keys(byCountry).sort();
-    grid.innerHTML = '';
-    const sectionIds = [];
-
-    sortedCountries.forEach(country => {
-      const countryChannels = byCountry[country].slice().sort((a, b) => a.name.localeCompare(b.name));
-      const firstChar = country.charAt(0).toUpperCase();
-      const letterGroup = /^[A-Z]$/.test(firstChar) ? firstChar : "#";
-      const sectionId = "country-" + (letterGroup === "#" ? "other" : letterGroup.toLowerCase());
-
-      const section = document.createElement("div");
-      section.className = "country-section";
-      section.id = sectionId;
-
-      const header = document.createElement("div");
-      header.className = "country-header";
-      header.innerHTML =
-        '<h2>' + escapeHtml(country) + '</h2>' +
-        '<span class="count">' + countryChannels.length + ' channel' + (countryChannels.length > 1 ? 's' : '') + '</span>';
-      section.appendChild(header);
-
-      const countryGrid = document.createElement("div");
-      countryGrid.className = "channel-grid";
-      countryChannels.forEach(c => {
-        countryGrid.appendChild(buildCard(c));
-      });
-      section.appendChild(countryGrid);
-      grid.appendChild(section);
-
-      sectionIds.push({ id: sectionId, letter: firstChar });
-    });
-
-    attachFavHandlers(grid);
-
-    setupScrollSpy(sectionIds);
-  }
-
-  function setupScrollSpy(sectionIds) {
-    if (typeof IntersectionObserver === 'undefined') return;
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        const letter = entry.target.dataset.letterGroup;
-        if (!letter) return;
-        const btn = alphaNavEl.querySelector('button[data-letter="' + letter + '"]');
-        if (btn) {
-          if (entry.isIntersecting) {
-            btn.classList.add("active");
-          } else {
-            btn.classList.remove("active");
-          }
-        }
-      });
-    }, { rootMargin: "-80px 0px -60% 0px", threshold: 0.1 });
-
-    sectionIds.forEach(s => {
-      const el = document.getElementById(s.id);
-      if (el) {
-        el.dataset.letterGroup = s.letter;
-        observer.observe(el);
-      }
-    });
   }
 
   function renderRecentlyWatched() {
