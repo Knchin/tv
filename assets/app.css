@@ -61,6 +61,20 @@ body {
   .channel-grid { grid-template-columns: repeat(6, 1fr); }
 }
 
+.pagination {
+  display: flex; align-items: center; justify-content: center; gap: 16px;
+  margin-top: 28px;
+}
+.page-btn {
+  padding: 9px 18px; border-radius: 10px; cursor: pointer;
+  background: rgba(18,32,68,.55); color: #bcd4f5;
+  border: 1px solid rgba(120,170,245,.3);
+  font-size: 14px; font-weight: 600; transition: background .16s, opacity .16s;
+}
+.page-btn:hover:not(:disabled) { background: rgba(120,170,245,.25); }
+.page-btn:disabled { opacity: .4; cursor: default; }
+.page-indicator { font-size: 13px; color: #8fa5c7; min-width: 90px; text-align: center; }
+
 .channel-card {
   display: flex; flex-direction: column; gap: 12px;
   padding: 18px; border-radius: 18px;

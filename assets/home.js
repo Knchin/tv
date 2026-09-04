@@ -20,6 +20,10 @@
   const searchFilterBarEl = document.getElementById("search-filter-bar");
   const searchInputEl = document.getElementById("search-input");
   const searchClearBtn = document.getElementById("search-clear");
+  const paginationEl = document.getElementById("pagination");
+  const pagePrevBtn = document.getElementById("page-prev");
+  const pageNextBtn = document.getElementById("page-next");
+  const pageIndicatorEl = document.getElementById("page-indicator");
 
   // State
   let allChannels = [];
@@ -27,6 +31,8 @@
   let currentFilters = { search: '', country: 'all', category: 'all' };
   let searchDebounceTimer = null;
   let isSearchOpen = false;
+  const PAGE_SIZE = 18; // 6 per line x 3 lines
+  let currentPage = 1;
 
   // Initialize
   function init() {
@@ -169,8 +175,25 @@
   function renderAllChannels() {
     filteredChannels = window.ChannelData.filterChannels(allChannels, currentFilters);
     filteredChannels = filteredChannels.slice().sort((a, b) => a.name.localeCompare(b.name));
-    renderChannels(filteredChannels, grid, { showCountry: true, showCategory: true });
+    const totalPages = Math.max(1, Math.ceil(filteredChannels.length / PAGE_SIZE));
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const pageChannels = filteredChannels.slice(start, start + PAGE_SIZE);
+    renderChannels(pageChannels, grid, { showCountry: true, showCategory: true });
+    renderPagination(totalPages);
     updateResultsInfo();
+  }
+
+  function renderPagination(totalPages) {
+    if (totalPages <= 1) {
+      paginationEl.hidden = true;
+      return;
+    }
+    paginationEl.hidden = false;
+    pageIndicatorEl.textContent = "Page " + currentPage + " of " + totalPages;
+    pagePrevBtn.disabled = currentPage <= 1;
+    pageNextBtn.disabled = currentPage >= totalPages;
   }
 
   function renderRecentlyWatched() {
@@ -205,6 +228,7 @@
 
   function applyFilters() {
     filteredChannels = window.ChannelData.filterChannels(allChannels, currentFilters);
+    currentPage = 1;
     renderAllChannels();
   }
 
@@ -251,6 +275,14 @@
       categoryFilterEl.value = 'all';
       searchClearBtn.hidden = true;
       applyFilters();
+    });
+
+    pagePrevBtn.addEventListener('click', () => {
+      if (currentPage > 1) { currentPage -= 1; renderAllChannels(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    });
+
+    pageNextBtn.addEventListener('click', () => {
+      currentPage += 1; renderAllChannels(); window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
     document.addEventListener('click', (e) => {
