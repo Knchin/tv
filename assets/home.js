@@ -186,6 +186,7 @@
   }
 
   function renderPagination(totalPages) {
+    pageNumbersEl.innerHTML = "";
     if (totalPages <= 1) {
       paginationEl.hidden = true;
       return;
@@ -194,7 +195,6 @@
     pagePrevBtn.disabled = currentPage <= 1;
     pageNextBtn.disabled = currentPage >= totalPages;
 
-    pageNumbersEl.innerHTML = "";
     var pages = pageWindow(currentPage, totalPages);
     pages.forEach(function (p, idx) {
       if (p === "…") {
