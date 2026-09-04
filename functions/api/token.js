@@ -48,7 +48,17 @@ export async function onRequest(context) {
     }
 
     const tokenUrl = await decrypt(data);
-    return json({ url: tokenUrl, channel: id });
+    // Diagnostic: check playability of the freshly-minted URL from the
+    // Cloudflare edge, and report it. Useful to see whether the token is
+    // bound to the requesting IP (protection) or generally playable.
+    let playStatus = null;
+    try {
+      const check = await fetch(tokenUrl, { headers: { "User-Agent": UA } });
+      playStatus = check.status;
+    } catch (e) {
+      playStatus = "fetch-error";
+    }
+    return json({ url: tokenUrl, channel: id, playStatus });
   } catch (e) {
     return json({ url: null, error: String(e && e.message ? e.message : e) }, 500);
   }
