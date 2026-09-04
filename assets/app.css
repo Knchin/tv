@@ -17,68 +17,14 @@ body {
   padding-top: 80px; /* space for header */
 }
 
-.alpha-nav {
-  position: fixed;
-  left: 0;
-  top: 80px;
-  bottom: 0;
-  width: 48px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  padding: 12px 0;
-  gap: 2px;
-  background: rgba(5,8,22,.85);
-  backdrop-filter: blur(12px);
-  border-right: 1px solid rgba(120,170,245,.12);
-  z-index: 100;
-  overflow-y: auto;
-}
-
-.alpha-nav button {
-  width: 32px;
-  height: 32px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: #8fa5c7;
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background .15s, color .15s, transform .1s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.alpha-nav button:hover {
-  background: rgba(120,170,245,.18);
-  color: #9be7ff;
-}
-
-.alpha-nav button.active {
-  background: rgba(22,119,255,.25);
-  color: #1677ff;
-}
-
-.alpha-nav button:active {
-  transform: scale(.92);
-}
-
 .wrap {
-  width: 100%; max-width: 480px;
-  margin: 0 auto; padding: 20px 16px 48px;
-  flex: 1;
-  margin-left: 48px; /* space for alpha nav */
+  width: 95%;
+  margin: 0 auto;
+  padding: 20px 16px 48px;
 }
 
 @media (max-width: 600px) {
-  .alpha-nav {
-    display: none;
-  }
   .wrap {
-    margin-left: 0;
     padding-top: 100px;
   }
 }
@@ -112,8 +58,7 @@ body {
 .channel-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
 
 @media (min-width: 640px) {
-  .wrap { max-width: 1200px; }
-  .channel-grid { grid-template-columns: repeat(5, 1fr); }
+  .channel-grid { grid-template-columns: repeat(10, 1fr); }
 }
 
 .channel-card {
@@ -451,24 +396,6 @@ body {
   margin-top: auto;
   padding-top: 8px;
   gap: 8px;
-}
-
-/* Scrollbar styling for alpha nav */
-.alpha-nav::-webkit-scrollbar {
-  width: 4px;
-}
-
-.alpha-nav::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.alpha-nav::-webkit-scrollbar-thumb {
-  background: rgba(120,170,245,.3);
-  border-radius: 2px;
-}
-
-.alpha-nav::-webkit-scrollbar-thumb:hover {
-  background: rgba(120,170,245,.5);
 }
 
 /* Focus visible for accessibility */
