@@ -478,3 +478,16 @@ body {
 .btn-refresh.loading .spin-sm { display: inline-block; }
 .btn-refresh.loading .ico { display: none; }
 .btn-refresh .ico { font-size: 16px; line-height: 1; }
+.btn-fullscreen,
+.btn-cast {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; border-radius: 12px;
+  border: 1px solid rgba(120,170,245,.4);
+  background: rgba(22,119,255,.15); color: #9be7ff;
+  cursor: pointer; flex: 0 0 auto;
+  transition: transform .15s, box-shadow .2s, background .18s;
+}
+.btn-fullscreen:hover,
+.btn-cast:hover { background: rgba(22,119,255,.28); box-shadow: 0 0 14px rgba(22,119,255,.4); }
+.btn-fullscreen:active,
+.btn-cast:active { transform: scale(.96); }
