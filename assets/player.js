@@ -18,6 +18,7 @@
     var hls = null;
     var userActivated = false;
     var youtubeIframe = null;
+    var autoRefreshCount = 0;
 
     function overlays(show) {
       ovlLoading.hidden = show !== "loading";
@@ -59,6 +60,7 @@
     // Hide the loading overlay once real frames start flowing.
     vid.addEventListener("playing", function () {
       overlays(null);
+      autoRefreshCount = 0;
     });
     vid.addEventListener("canplay", function () {
       if (!ovlError.hidden) return;
@@ -116,8 +118,7 @@
           overlays(null);
         };
         vid.onerror = function () {
-          overlays("error");
-          errSub.textContent = "Stream failed / expired.";
+          handleStreamFailure();
         };
         startPlay();
         return;
@@ -138,12 +139,12 @@
         hls.on(Hls.Events.ERROR, function (evt, data) {
           if (!data.fatal) return;
           if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+            if (handleStreamFailure()) return;
             hls.startLoad();
           } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
             hls.recoverMediaError();
           } else {
-            overlays("error");
-            errSub.textContent = "Stream failed / expired.";
+            handleStreamFailure();
           }
         });
       } else {
@@ -152,8 +153,7 @@
           overlays(null);
         };
         vid.onerror = function () {
-          overlays("error");
-          errSub.textContent = "Stream failed / expired.";
+          handleStreamFailure();
         };
         startPlay();
       }
@@ -181,27 +181,74 @@
         });
     }
 
-    // Refresh: try to mint a fresh token, but only use it if it verifies as a
-    // real playable playlist. Otherwise keep playing the embedded stream.
-    btn.addEventListener("click", async function () {
-      btn.disabled = true;
-      btn.classList.add("loading");
-      overlays("loading");
-      try {
-        var res = await fetch("/api/token");
-        var data = res.ok ? await res.json() : null;
-        if (data && data.url && (await isPlayableM3u8(data.url))) {
-          play(data.url);
-        } else {
-          play(DEFAULT_URL);
-        }
-      } catch (e) {
-        play(DEFAULT_URL);
-      } finally {
-        btn.disabled = false;
-        btn.classList.remove("loading");
+    function showStreamError() {
+      overlays("error");
+      errSub.textContent = "Stream failed / expired. Try reconnecting.";
+      ovlError.style.cursor = "pointer";
+      ovlError.onclick = function () {
+        if (currentUrl) refreshToken(false);
+      };
+    }
+
+    // Auto-retry once per playback session: on a fatal stream failure,
+    // ask the token endpoint for a freshly-issued URL. Only swap to it if
+    // it verifies as a real playable playlist; otherwise show the error.
+    function handleStreamFailure() {
+      if (autoRefreshCount >= 1) {
+        showStreamError();
+        return true;
       }
-    });
+      autoRefreshCount += 1;
+      // Defer so we are not destroying hls.js from inside its own error event.
+      setTimeout(function () {
+        refreshToken(true);
+      }, 0);
+      return true;
+    }
+
+    function refreshToken(auto) {
+      if (btn) {
+        btn.disabled = true;
+        btn.classList.add("loading");
+      }
+      overlays("loading");
+      return fetch("/api/token?id=" + encodeURIComponent(channel.id))
+        .then(function (res) {
+          return res.ok ? res.json() : null;
+        })
+        .then(function (data) {
+          if (data && data.url) {
+            return isPlayableM3u8(data.url).then(function (ok) {
+              if (ok) {
+                play(data.url);
+                return;
+              }
+              if (!auto) play(DEFAULT_URL);
+              else showStreamError();
+            });
+          }
+          if (!auto) play(DEFAULT_URL);
+          else showStreamError();
+        })
+        .catch(function () {
+          if (!auto) play(DEFAULT_URL);
+          else showStreamError();
+        })
+        .finally(function () {
+          if (btn) {
+            btn.disabled = false;
+            btn.classList.remove("loading");
+          }
+        });
+    }
+
+    // Refresh button: try to mint a fresh token, but only use it if it
+    // verifies as a real playable playlist.
+    if (btn) {
+      btn.addEventListener("click", function () {
+        refreshToken(false);
+      });
+    }
 
     // Autoplay to start (will show tap overlay if blocked).
     play(DEFAULT_URL);

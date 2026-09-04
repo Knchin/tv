@@ -1,43 +1,56 @@
 export async function onRequest(context) {
-  const BASE = "https://www.elahmad.ru";
-  const PAGE = BASE + "/tv/mobiletv/glarb.php?id=lb2";
-  const RESULT = BASE + "/tv/result/embed_result_elahmad_81.php";
+  const url = new URL(context.request.url);
+  const id = (url.searchParams.get("id") || "lb2").toLowerCase();
+
+  const SOURCES = {
+    lb2: {
+      page: "https://www.elahmad.ru/tv/mobiletv/glarb.php?id=lb2",
+      result: "https://www.elahmad.ru/tv/result/embed_result_elahmad_81.php",
+      post: "id=lb2",
+    },
+  };
+
+  const source = SOURCES[id];
+  if (!source) {
+    return json({ url: null, error: "No token source for this channel" }, 200);
+  }
+
   const UA =
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
   try {
-    const pageRes = await fetch(PAGE, {
-      headers: { "User-Agent": UA, Referer: BASE + "/" },
+    const pageRes = await fetch(source.page, {
+      headers: { "User-Agent": UA, Referer: "https://www.elahmad.ru/" },
     });
     const html = await pageRes.text();
 
     const marker = 'name="csrf-token" content="';
     const i = html.indexOf(marker);
     if (i === -1) {
-      return json({ error: "Could not read csrf-token from page" }, 500);
+      return json({ url: null, error: "Could not read csrf-token from page" }, 500);
     }
     const csrf = html.slice(i + marker.length).split('"')[0];
 
-    const resultRes = await fetch(RESULT, {
+    const resultRes = await fetch(source.result, {
       method: "POST",
       headers: {
         "User-Agent": UA,
-        Referer: PAGE,
-        Origin: BASE,
+        Referer: source.page,
+        Origin: "https://www.elahmad.ru",
         "Content-Type": "application/x-www-form-urlencoded",
         "X-Requested-With": "XMLHttpRequest",
       },
-      body: "id=lb2&csrf_token=" + encodeURIComponent(csrf),
+      body: source.post + "&csrf_token=" + encodeURIComponent(csrf),
     });
     const data = await resultRes.json();
     if (!data.link_4) {
-      return json({ error: "Unexpected response from stream endpoint" }, 502);
+      return json({ url: null, error: "Unexpected response from stream endpoint" }, 502);
     }
 
-    const url = await decrypt(data);
-    return json({ url: url, channel: "lb2" });
+    const tokenUrl = await decrypt(data);
+    return json({ url: tokenUrl, channel: id });
   } catch (e) {
-    return json({ error: String(e && e.message ? e.message : e) }, 500);
+    return json({ url: null, error: String(e && e.message ? e.message : e) }, 500);
   }
 }
 
