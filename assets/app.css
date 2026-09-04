@@ -73,7 +73,21 @@ body {
 }
 .page-btn:hover:not(:disabled) { background: rgba(120,170,245,.25); }
 .page-btn:disabled { opacity: .4; cursor: default; }
-.page-indicator { font-size: 13px; color: #8fa5c7; min-width: 90px; text-align: center; }
+.page-numbers { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.page-num {
+  width: 34px; height: 34px; border-radius: 8px; cursor: pointer;
+  background: rgba(18,32,68,.55); color: #bcd4f5;
+  border: 1px solid rgba(120,170,245,.3);
+  font-size: 13px; font-weight: 600; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background .16s, color .16s, border-color .16s;
+}
+.page-num:hover:not(.active) { background: rgba(120,170,245,.25); }
+.page-num.active {
+  background: rgba(22,119,255,.85); border-color: rgba(22,119,255,.95);
+  color: #fff; box-shadow: 0 0 14px rgba(22,119,255,.5);
+}
+.page-dots { color: #8fa5c7; padding: 0 2px; font-size: 14px; }
 
 .channel-card {
   display: flex; flex-direction: column; gap: 12px;

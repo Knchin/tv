@@ -23,7 +23,7 @@
   const paginationEl = document.getElementById("pagination");
   const pagePrevBtn = document.getElementById("page-prev");
   const pageNextBtn = document.getElementById("page-next");
-  const pageIndicatorEl = document.getElementById("page-indicator");
+  const pageNumbersEl = document.getElementById("page-numbers");
 
   // State
   let allChannels = [];
@@ -191,9 +191,52 @@
       return;
     }
     paginationEl.hidden = false;
-    pageIndicatorEl.textContent = "Page " + currentPage + " of " + totalPages;
     pagePrevBtn.disabled = currentPage <= 1;
     pageNextBtn.disabled = currentPage >= totalPages;
+
+    pageNumbersEl.innerHTML = "";
+    var pages = pageWindow(currentPage, totalPages);
+    pages.forEach(function (p, idx) {
+      if (p === "…") {
+        var dots = document.createElement("span");
+        dots.className = "page-dots";
+        if (idx > 0 && pages[idx - 1] === "…") return;
+        dots.textContent = "…";
+        pageNumbersEl.appendChild(dots);
+        return;
+      }
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "page-num" + (p === currentPage ? " active" : "");
+      btn.textContent = p;
+      btn.setAttribute("aria-label", "Go to page " + p);
+      if (p !== currentPage) {
+        btn.setAttribute("aria-current", "false");
+      } else {
+        btn.setAttribute("aria-current", "page");
+      }
+      btn.addEventListener("click", function () {
+        currentPage = p;
+        renderAllChannels();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+      pageNumbersEl.appendChild(btn);
+    });
+  }
+
+  function pageWindow(current, total) {
+    if (total <= 7) {
+      var all = [];
+      for (var i = 1; i <= total; i++) all.push(i);
+      return all;
+    }
+    var pages = [];
+    var left = Math.max(2, current - 1);
+    var right = Math.min(total - 1, current + 1);
+    if (left > 2) pages.push("…");
+    for (var p = left; p <= right; p++) pages.push(p);
+    if (right < total - 1) pages.push("…");
+    return [1].concat(pages, [total]);
   }
 
   function renderRecentlyWatched() {
