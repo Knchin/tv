@@ -187,21 +187,111 @@
       };
     }
 
+    function b64ToBuf(b64) {
+      var bin = atob(b64);
+      var bytes = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return bytes;
+    }
+
+    function hexToBuf(hex) {
+      var bytes = new Uint8Array(hex.length / 2);
+      for (var i = 0; i < bytes.length; i++)
+        bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
+      return bytes;
+    }
+
+    // Try to mint a token directly from the visitor's own browser. elahmad
+    // binds tokens to the requesting IP, so a browser-minted token (visitor's
+    // IP) is the only kind that can actually play in this browser. Falls back
+    // to the server endpoint when cross-origin requests are blocked.
+    function mintTokenInBrowser() {
+      var PAGE = "https://www.elahmad.ru/tv/mobiletv/glarb.php?id=lb2";
+      var RESULT = "https://www.elahmad.ru/tv/result/embed_result_elahmad_81.php";
+      var UA =
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
+      return fetch(PAGE, {
+        headers: { "User-Agent": UA, Referer: "https://www.elahmad.ru/" },
+      })
+        .then(function (r) {
+          if (!r.ok) throw new Error("page " + r.status);
+          return r.text();
+        })
+        .then(function (html) {
+          var marker = 'name="csrf-token" content="';
+          var i = html.indexOf(marker);
+          if (i === -1) throw new Error("no csrf-token");
+          return html.slice(i + marker.length).split('"')[0];
+        })
+        .then(function (csrf) {
+          return fetch(RESULT, {
+            method: "POST",
+            headers: {
+              "User-Agent": UA,
+              Referer: PAGE,
+              Origin: "https://www.elahmad.ru",
+              "Content-Type": "application/x-www-form-urlencoded",
+              "X-Requested-With": "XMLHttpRequest",
+            },
+            body: "id=lb2&csrf_token=" + encodeURIComponent(csrf),
+          })
+            .then(function (r) {
+              if (!r.ok) throw new Error("result " + r.status);
+              return r.json();
+            })
+            .then(function (data) {
+              if (!data.link_4) throw new Error("no link_4");
+              return crypto.subtle.importKey(
+                "raw",
+                hexToBuf(data.key),
+                { name: "AES-CBC" },
+                false,
+                ["decrypt"]
+              ).then(function (key) {
+                return crypto.subtle.decrypt(
+                  { name: "AES-CBC", iv: hexToBuf(data.iv) },
+                  key,
+                  b64ToBuf(data.link_4)
+                );
+              }).then(function (plain) {
+                return new TextDecoder().decode(plain)
+                  .replace(/[\x00-\x1f]+$/, "");
+              });
+            });
+        });
+    }
+
     function refreshToken() {
       if (btn) {
         btn.disabled = true;
         btn.classList.add("loading");
       }
       overlays("loading");
-      return fetch("/api/token?id=" + encodeURIComponent(channel.id))
-        .then(function (res) {
-          return res.ok ? res.json() : null;
-        })
-        .then(function (data) {
-          if (data && data.url) {
-            return isPlayableM3u8(data.url).then(function (ok) {
+
+      var serverMint = function () {
+        return fetch("/api/token?id=" + encodeURIComponent(channel.id))
+          .then(function (res) {
+            return res.ok ? res.json() : null;
+          })
+          .then(function (data) {
+            return data && data.url ? data.url : null;
+          });
+      };
+
+      var urlPromise =
+        channel.id === "lb2"
+          ? mintTokenInBrowser().catch(serverMint).then(function (url) {
+              return url || serverMint();
+            })
+          : serverMint();
+
+      return urlPromise
+        .then(function (url) {
+          if (url) {
+            return isPlayableM3u8(url).then(function (ok) {
               if (ok) {
-                play(data.url);
+                play(url);
                 return;
               }
               play(DEFAULT_URL);
