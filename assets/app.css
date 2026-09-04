@@ -62,25 +62,30 @@ body {
 }
 
 .pagination {
-  display: flex; align-items: center; justify-content: center; gap: 16px;
-  margin-top: 28px;
+  display: flex; align-items: center; gap: 12px;
+  margin-top: 28px; width: 100%;
 }
 .page-btn {
-  padding: 9px 18px; border-radius: 10px; cursor: pointer;
+  padding: 9px 14px; border-radius: 10px; cursor: pointer;
   background: rgba(18,32,68,.55); color: #bcd4f5;
   border: 1px solid rgba(120,170,245,.3);
-  font-size: 14px; font-weight: 600; transition: background .16s, opacity .16s;
+  font-size: 13px; font-weight: 600; transition: background .16s, opacity .16s;
+  white-space: nowrap; flex: 0 0 auto;
 }
 .page-btn:hover:not(:disabled) { background: rgba(120,170,245,.25); }
 .page-btn:disabled { opacity: .4; cursor: default; }
-.page-numbers { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.page-numbers {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  flex: 1 1 auto; flex-wrap: wrap; min-width: 0;
+}
 .page-num {
-  width: 34px; height: 34px; border-radius: 8px; cursor: pointer;
+  width: 32px; height: 32px; border-radius: 8px; cursor: pointer;
   background: rgba(18,32,68,.55); color: #bcd4f5;
   border: 1px solid rgba(120,170,245,.3);
   font-size: 13px; font-weight: 600; line-height: 1;
   display: inline-flex; align-items: center; justify-content: center;
   transition: background .16s, color .16s, border-color .16s;
+  flex: 0 0 auto;
 }
 .page-num:hover:not(.active) { background: rgba(120,170,245,.25); }
 .page-num.active {
@@ -88,6 +93,10 @@ body {
   color: #fff; box-shadow: 0 0 14px rgba(22,119,255,.5);
 }
 .page-dots { color: #8fa5c7; padding: 0 2px; font-size: 14px; }
+
+@media (max-width: 480px) {
+  .pagination { flex-wrap: wrap; justify-content: center; }
+}
 
 .channel-card {
   display: flex; flex-direction: column; gap: 12px;
@@ -484,6 +493,31 @@ body {
 .ovl .sub { font-size: 13px; color: #8fa5c7; }
 .ovl .big { font-size: 15px; font-weight: 700; color: #fff; }
 .ovl.err .big { color: #ff8f9a; }
+
+/* Player page: fit the whole page to the screen without scrolling */
+.player-page .wrap {
+  display: flex; flex-direction: column;
+  width: 100%; max-width: none;
+  height: 100dvh; min-height: 0;
+  padding: 0 clamp(10px, 2vw, 24px);
+}
+.player-page .app-header { margin-bottom: 0; padding: 10px 0 10px; flex: 0 0 auto; }
+.player-page .player {
+  flex: 1 1 auto; min-height: 0;
+  aspect-ratio: auto;
+  margin: 0 auto; width: 100%;
+  max-height: calc(100dvh - 120px);
+}
+.player-page .player video { object-fit: contain; }
+.player-page .player-actions {
+  flex: 0 0 auto;
+  margin-top: 10px;
+  gap: 10px;
+  justify-content: flex-end;
+}
+@media (min-width: 900px) {
+  .player-page .wrap { max-width: 1200px; margin: 0 auto; }
+}
 
 .player-actions { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
 .btn-refresh {

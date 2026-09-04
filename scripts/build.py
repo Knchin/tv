@@ -89,7 +89,7 @@ def generate_channel_page(channel):
     parts.append('    };')
     parts.append('  </script>')
     parts.append('</head>')
-    parts.append('<body>')
+    parts.append('<body class="player-page">')
     parts.append('  <div class="wrap">')
     parts.append('    <header class="app-header">')
     parts.append('      <a class="back" href="/">← Back to channels</a>')

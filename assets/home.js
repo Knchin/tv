@@ -225,14 +225,15 @@
   }
 
   function pageWindow(current, total) {
-    if (total <= 7) {
+    var NEIGHBORS = 5;
+    if (total <= NEIGHBORS * 2 + 3) {
       var all = [];
       for (var i = 1; i <= total; i++) all.push(i);
       return all;
     }
     var pages = [];
-    var left = Math.max(2, current - 1);
-    var right = Math.min(total - 1, current + 1);
+    var left = Math.max(2, current - NEIGHBORS);
+    var right = Math.min(total - 1, current + NEIGHBORS);
     if (left > 2) pages.push("…");
     for (var p = left; p <= right; p++) pages.push(p);
     if (right < total - 1) pages.push("…");
