@@ -120,7 +120,7 @@
       "</div>" +
       '<div class="channel-actions">' +
         '<button class="fav-btn" data-channel-id="' + eid(c.id) + '" aria-label="' + (isFav ? 'Remove from favorites' : 'Add to favorites') + '">' + favIcon + '</button>' +
-        '<span class="channel-cta">Watch Live</span>' +
+        '<span class="channel-cta"><svg class="play-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg></span>' +
       '</div>';
 
     return card;
