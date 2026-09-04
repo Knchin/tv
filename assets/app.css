@@ -58,7 +58,7 @@ body {
 .channel-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
 
 @media (min-width: 640px) {
-  .channel-grid { grid-template-columns: repeat(10, 1fr); }
+  .channel-grid { grid-template-columns: repeat(6, 1fr); }
 }
 
 .channel-card {
