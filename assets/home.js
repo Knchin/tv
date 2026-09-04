@@ -168,6 +168,7 @@
 
   function renderAllChannels() {
     filteredChannels = window.ChannelData.filterChannels(allChannels, currentFilters);
+    filteredChannels = filteredChannels.slice().sort((a, b) => a.name.localeCompare(b.name));
     renderChannels(filteredChannels, grid, { showCountry: true, showCategory: true });
     updateResultsInfo();
   }
