@@ -9,10 +9,10 @@ window.CHANNELS = [
     type: "hls",
     url: "https://games1.elahmad.store/tv14_www_elahmad._lb2/index.m3u8?token=0635cde8c0cb4bbca6741b3dd5d4d1c3ca0d91ff-d1c49752b0551250256f24ee4d520e77-1788293474-1788291674",
     slug: "lb2",
-    country: "United States",
-    countryCode: "us",
+    country: "Lebanon",
+    countryCode: "lb",
     category: "general",
-    languages: ["spa"],
+    languages: ["ara"],
   },
 
   {
