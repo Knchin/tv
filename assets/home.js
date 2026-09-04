@@ -225,7 +225,7 @@
   }
 
   function pageWindow(current, total) {
-    var NEIGHBORS = 5;
+    var NEIGHBORS = 20;
     if (total <= NEIGHBORS * 2 + 3) {
       var all = [];
       for (var i = 1; i <= total; i++) all.push(i);
