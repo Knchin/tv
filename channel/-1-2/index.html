@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#050816">
-  <meta name="description" content="鏡新聞 — Live Stream">
-  <title>鏡新聞 · Live Stream</title>
+  <meta name="description" content="之江纪录 — Live Stream">
+  <title>之江纪录 · Live Stream</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -17,15 +17,15 @@
   <script src="/assets/channels.js"></script>
   <script>
     window.ACTIVE_CHANNEL = {
-      id: "1l0sv6HrCpuIL7",
-      name: "鏡新聞",
+      id: "HzvN0O8csJFrwx",
+      name: "之江纪录",
       slug: "-1-2",
-      country: "Taiwan",
-      countryCode: "tw",
+      country: "China",
+      countryCode: "cn",
       category: "general",
-      type: "youtube",
-      url: "https://www.youtube-nocookie.com/embed/5n0y6b0Q25o",
-      languages: ["zho"],
+      type: "hls",
+      url: "https://ali-m-l.cztv.com/channels/lantian/channel012/1080p.m3u8",
+      languages: [],
       isGeoBlocked: false
     };
   </script>
@@ -34,7 +34,7 @@
   <div class="wrap">
     <header class="app-header">
       <a class="back" href="/">← Back to channels</a>
-      <h1><span id="channel-name">鏡新聞</span> <span style="color:#ff3b5c">🔴</span></h1>
+      <h1><span id="channel-name">之江纪录</span> <span style="color:#ff3b5c">🔴</span></h1>
     </header>
     <div class="player">
       <video id="vid" controls playsinline></video>
@@ -43,9 +43,9 @@
       <div class="ovl err" id="ovl-error" hidden><div class="big">The channel is temporarily unavailable.</div><div class="sub" id="err-sub">The live signal could not be loaded.</div></div>
     </div>
     <div class="player-actions">
-      <button class="btn-refresh" id="btn-refresh" aria-label="Refresh stream token" title="Refresh stream token" style="display:none"><span class="ico">🗘</span><span class="spin-sm"></span></button>
+      <button class="btn-refresh" id="btn-refresh" aria-label="Refresh stream token" title="Refresh stream token"><span class="ico">🗘</span><span class="spin-sm"></span></button>
       <button class="btn-fullscreen" id="btn-fullscreen" aria-label="Fullscreen"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"></path></svg></button>
-      <button class="btn-pip" id="btn-pip" aria-label="Picture in Picture" style="display:none"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 7V4a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3m14 0v10a2 2 0 0 1-2 2h-2m0-10V7a2 2 0 0 1 2-2h2"></path></svg></button>
+      <button class="btn-pip" id="btn-pip" aria-label="Picture in Picture"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 7V4a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3m14 0v10a2 2 0 0 1-2 2h-2m0-10V7a2 2 0 0 1 2-2h2"></path></svg></button>
     </div>
   </div>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>

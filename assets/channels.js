@@ -25591,7 +25591,7 @@ window.CHANNELS = [
     description: "",
     type: "youtube",
     url: "https://www.youtube-nocookie.com/embed/nNi5jPFIu8k",
-    slug: "",
+    slug: "idolmaster-channel",
     country: "Japan",
     countryCode: "jp",
     category: "general",

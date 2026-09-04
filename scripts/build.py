@@ -123,40 +123,38 @@ def generate_channel_page(channel):
     return '\n'.join(parts)
 
 def build_channel_pages():
-    with open('./assets/channels_new.json', 'r') as f:
-        raw_channels = json.load(f)
-    
-    existing_slugs = set()
-    channels_with_slugs = []
-    
-    for ch in raw_channels:
-        slug = slugify(ch['name'])
-        base_slug = slug
-        counter = 1
-        while slug in existing_slugs:
-            slug = f"{base_slug}-{counter}"
-            counter += 1
-        existing_slugs.add(slug)
-        channels_with_slugs.append({**ch, 'slug': slug})
-    
+    with open('./assets/channels_canonical.json', 'r') as f:
+        channels = json.load(f)
+
     channel_dir = Path('./channel')
     channel_dir.mkdir(parents=True, exist_ok=True)
-    
-    for channel in raw_channels:
-        slug = slugify(channel['name'])
-        base_slug = slug
-        counter = 1
-        while slug in existing_slugs:
-            slug = f"{slug}-{counter}"
-            counter += 1
+
+    valid_slugs = set()
+    for channel in channels:
+        slug = channel['slug']
+        valid_slugs.add(slug)
         channel_dir_path = Path('./channel') / slug
         channel_dir_path.mkdir(parents=True, exist_ok=True)
-        channel_with_slug = {**channel, 'slug': slug}
-        html = generate_channel_page(channel_with_slug)
+        html = generate_channel_page(channel)
         with open(channel_dir_path / 'index.html', 'w') as f:
             f.write(html)
-    
-    print(f"Generated {len(raw_channels)} channel pages")
+
+    # Remove stale channel dirs whose slug is no longer in the catalog.
+    removed = 0
+    for entry in channel_dir.iterdir():
+        if entry.is_dir() and entry.name not in valid_slugs:
+            # Safety: do not remove nested unrelated dirs
+            for f in entry.iterdir():
+                if f.is_file():
+                    f.unlink()
+            try:
+                entry.rmdir()
+                removed += 1
+            except OSError:
+                pass
+
+    print(f"Generated {len(channels)} channel pages")
+    print(f"Removed {removed} stale channel directories")
     print("Build complete!")
 
 if __name__ == '__main__':
