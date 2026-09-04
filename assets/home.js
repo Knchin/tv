@@ -208,7 +208,7 @@
     const sectionIds = [];
 
     sortedCountries.forEach(country => {
-      const countryChannels = byCountry[country];
+      const countryChannels = byCountry[country].slice().sort((a, b) => a.name.localeCompare(b.name));
       const firstChar = country.charAt(0).toUpperCase();
       const letterGroup = /^[A-Z]$/.test(firstChar) ? firstChar : "#";
       const sectionId = "country-" + (letterGroup === "#" ? "other" : letterGroup.toLowerCase());
