@@ -18,7 +18,6 @@
     var hls = null;
     var userActivated = false;
     var youtubeIframe = null;
-    var autoRefreshCount = 0;
 
     function overlays(show) {
       ovlLoading.hidden = show !== "loading";
@@ -60,7 +59,6 @@
     // Hide the loading overlay once real frames start flowing.
     vid.addEventListener("playing", function () {
       overlays(null);
-      autoRefreshCount = 0;
     });
     vid.addEventListener("canplay", function () {
       if (!ovlError.hidden) return;
@@ -118,7 +116,7 @@
           overlays(null);
         };
         vid.onerror = function () {
-          handleStreamFailure();
+          showStreamError();
         };
         startPlay();
         return;
@@ -139,12 +137,11 @@
         hls.on(Hls.Events.ERROR, function (evt, data) {
           if (!data.fatal) return;
           if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-            if (handleStreamFailure()) return;
             hls.startLoad();
           } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
             hls.recoverMediaError();
           } else {
-            handleStreamFailure();
+            showStreamError();
           }
         });
       } else {
@@ -153,7 +150,7 @@
           overlays(null);
         };
         vid.onerror = function () {
-          handleStreamFailure();
+          showStreamError();
         };
         startPlay();
       }
@@ -183,30 +180,14 @@
 
     function showStreamError() {
       overlays("error");
-      errSub.textContent = "Stream failed / expired. Try reconnecting.";
+      errSub.textContent = "Stream failed / expired. Tap to reconnect.";
       ovlError.style.cursor = "pointer";
       ovlError.onclick = function () {
-        if (currentUrl) refreshToken(false);
+        refreshToken();
       };
     }
 
-    // Auto-retry once per playback session: on a fatal stream failure,
-    // ask the token endpoint for a freshly-issued URL. Only swap to it if
-    // it verifies as a real playable playlist; otherwise show the error.
-    function handleStreamFailure() {
-      if (autoRefreshCount >= 1) {
-        showStreamError();
-        return true;
-      }
-      autoRefreshCount += 1;
-      // Defer so we are not destroying hls.js from inside its own error event.
-      setTimeout(function () {
-        refreshToken(true);
-      }, 0);
-      return true;
-    }
-
-    function refreshToken(auto) {
+    function refreshToken() {
       if (btn) {
         btn.disabled = true;
         btn.classList.add("loading");
@@ -223,16 +204,13 @@
                 play(data.url);
                 return;
               }
-              if (!auto) play(DEFAULT_URL);
-              else showStreamError();
+              play(DEFAULT_URL);
             });
           }
-          if (!auto) play(DEFAULT_URL);
-          else showStreamError();
+          play(DEFAULT_URL);
         })
         .catch(function () {
-          if (!auto) play(DEFAULT_URL);
-          else showStreamError();
+          play(DEFAULT_URL);
         })
         .finally(function () {
           if (btn) {
@@ -246,7 +224,7 @@
     // verifies as a real playable playlist.
     if (btn) {
       btn.addEventListener("click", function () {
-        refreshToken(false);
+        refreshToken();
       });
     }
 
