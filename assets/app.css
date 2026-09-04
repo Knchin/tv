@@ -248,6 +248,15 @@ body {
   color: #8fa5c7;
 }
 
+.site-footer {
+  padding: 24px 16px 32px;
+  text-align: center;
+  font-size: 13px;
+  color: #8fa5c7;
+  border-top: 1px solid rgba(120,170,245,.15);
+  margin-top: 40px;
+}
+
 .clear-filters-btn {
   padding: 6px 12px;
   border: 1px solid rgba(255,59,92,.4);
