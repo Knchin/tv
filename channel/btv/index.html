@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#050816">
-  <meta name="description" content="BTV — Live Stream">
-  <title>BTV · Live Stream</title>
+  <meta name="description" content="bTV — Live Stream">
+  <title>bTV · Live Stream</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -17,15 +17,15 @@
   <script src="/assets/channels.js"></script>
   <script>
     window.ACTIVE_CHANNEL = {
-      id: "udz6zYlqmv3dZH",
-      name: "BTV",
+      id: "btv",
+      name: "bTV",
       slug: "btv",
-      country: "United States",
-      countryCode: "us",
+      country: "Unknown",
+      countryCode: "",
       category: "general",
-      type: "youtube",
-      url: "https://www.youtube-nocookie.com/embed/BXB9NlVKoEQ",
-      languages: ["eng"],
+      type: "hls",
+      url: "http://213.91.179.28:8000/play/a03w",
+      languages: [],
       isGeoBlocked: false
     };
   </script>
@@ -34,7 +34,7 @@
   <div class="wrap">
     <header class="app-header">
       <a class="back" href="/">← Back to channels</a>
-      <h1><span id="channel-name">BTV</span> <span style="color:#ff3b5c">🔴</span></h1>
+      <h1><span id="channel-name">bTV</span> <span style="color:#ff3b5c">🔴</span></h1>
     </header>
     <div class="player">
       <video id="vid" controls playsinline></video>
@@ -43,9 +43,9 @@
       <div class="ovl err" id="ovl-error" hidden><div class="big">The channel is temporarily unavailable.</div><div class="sub" id="err-sub">The live signal could not be loaded.</div></div>
     </div>
     <div class="player-actions">
-      <button class="btn-refresh" id="btn-refresh" aria-label="Refresh stream token" title="Refresh stream token" style="display:none"><span class="ico">🗘</span><span class="spin-sm"></span></button>
-      <button class="btn-copy" id="btn-copy" aria-label="Copy stream URL" title="Copy stream URL" style="display:none"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
-      <button class="btn-cast" id="btn-cast" aria-label="Cast to device" title="Cast to TV or monitor" style="display:none"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 9.95 20M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"></path><line x1="2" y1="20" x2="2.01" y2="20"></line></svg></button>
+      <button class="btn-refresh" id="btn-refresh" aria-label="Refresh stream token" title="Refresh stream token"><span class="ico">🗘</span><span class="spin-sm"></span></button>
+      <button class="btn-copy" id="btn-copy" aria-label="Copy stream URL" title="Copy stream URL"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
+      <button class="btn-cast" id="btn-cast" aria-label="Cast to device" title="Cast to TV or monitor"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 9.95 20M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"></path><line x1="2" y1="20" x2="2.01" y2="20"></line></svg></button>
       <button class="btn-fullscreen" id="btn-fullscreen" aria-label="Fullscreen"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"></path></svg></button>
     </div>
   </div>

@@ -60,7 +60,8 @@ async function main() {
   const url = await mint();
   const file = "assets/channels.js";
   let html = fs.readFileSync(file, "utf8");
-  const re = /(url:\s*\n?\s*")[^"]+(")/;
+  // Match "url": "..." pattern in the JSON-like format
+  const re = /("url"\s*:\s*")[^"]+(")/;
   const m = html.match(re);
   if (!m) throw new Error("Channel url not found in " + file);
   if (m[1].indexOf(url) !== -1) {
