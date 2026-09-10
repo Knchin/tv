@@ -103,9 +103,9 @@
   </aside>
 
   <!-- CDN: Three.js, TopoJSON client, Globe.gl -->
-  <script src="https://unpkg.com/three@0.160.0/build/three.min.js" crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/topojson-client@3.1.0/dist/topojson-client.min.js" crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/globe.gl@2.31.1/dist/globe.gl.min.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/three@0.160.0/build/three.min.js" crossorigin="anonymous" onerror="window.__globeCDNFailed=true"></script>
+  <script src="https://unpkg.com/topojson-client@3.1.0/dist/topojson-client.min.js" crossorigin="anonymous" onerror="window.__globeCDNFailed=true"></script>
+  <script src="https://unpkg.com/globe.gl@2.46.2/dist/globe.gl.min.js" crossorigin="anonymous" onerror="window.__globeCDNFailed=true"></script>
 
   <script src="/assets/globe.js"></script>
 
@@ -121,6 +121,12 @@
     function bootGlobe() {
       if (!window.ChannelData || !window.ChannelData.channels) return;
 
+      // If a required CDN library failed to load, show fallback instead of a black screen
+      if (window.__globeCDNFailed || !window.Globe || !window.topojson) {
+        showFallback("Could not load the 3D map libraries from the CDN.");
+        return;
+      }
+
       // Fetch world GeoJSON (TopoJSON → GeoJSON) and init globe
       fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json")
         .then(function (r) { return r.json(); })
@@ -129,16 +135,22 @@
           if (window.TfarrajGlobe) {
             window.TfarrajGlobe.state.features = geo.features;
             window.TfarrajGlobe.init();
+          } else {
+            showFallback("Could not initialize the interactive map.");
           }
         })
         .catch(function (err) {
           console.error("Failed to load world GeoJSON:", err);
-          document.getElementById("globe-canvas").innerHTML =
-            '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#8fa5c7;flex-direction:column;gap:12px;padding:24px;text-align:center">'
-            + '<p style="font-size:18px;color:#eef2ff">Could not load the world map</p>'
-            + '<p style="font-size:14px">Check your connection and <a href="/" style="color:#9be7ff">browse channels as a list</a> instead.</p>'
-            + '</div>';
+          showFallback("Could not load the world map data.");
         });
+
+      function showFallback(msg) {
+        document.getElementById("globe-canvas").innerHTML =
+          '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#8fa5c7;flex-direction:column;gap:12px;padding:24px;text-align:center">'
+          + '<p style="font-size:18px;color:#eef2ff">' + msg + '</p>'
+          + '<p style="font-size:14px">Check your connection and <a href="/" style="color:#9be7ff">browse channels as a list</a> instead.</p>'
+          + '</div>';
+      }
 
       // Wire header search
       var searchInput = document.getElementById("globe-search-input");
