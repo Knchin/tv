@@ -7,7 +7,7 @@
  *    MUST re-fetch these from the network to get the freshest token and never
  *    serve a stale cached token. Live video segments are never cached here.
  */
-var VERSION = "v14";
+var VERSION = "v16";
 var SHELL_CACHE = "tfarraj-shell-" + VERSION;
 
 var PRECACHE = [

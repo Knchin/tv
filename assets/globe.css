@@ -373,32 +373,60 @@
 .globe-canvas .player-wrap {
   box-sizing: border-box;
   position: absolute; inset: 0;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: 12px;
-  padding: 88px 380px 24px 340px;
+  display: flex;
+  flex-direction: column;
 }
-.globe-canvas .player-wrap .player {
-  width: 100%; max-width: 1100px;
-  aspect-ratio: 16/9;
-}
-.globe-canvas .player-wrap .player-actions { margin-top: 0; justify-content: flex-end; }
 .globe-canvas .player-wrap .globe-channel-title {
+  flex: 0 0 auto;
   font-size: 15px; font-weight: 800; color: #eef2ff;
-  flex: 0 0 auto; text-align: center;
+  text-align: center;
+  padding: 92px 16px 0;
 }
 .globe-canvas .player-wrap .globe-channel-title .channel-country { font-weight: 600; font-size: 12px; }
+.globe-canvas .player-wrap .player-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px 24px 6px;
+}
+.globe-canvas .player-wrap .player-content .player {
+  width: min(1160px, calc((100dvh - 220px) * 1.7778));
+  max-width: 100%;
+  aspect-ratio: 16/9;
+}
+.globe-canvas .player-wrap .player-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 10px 24px 16px;
+  background: rgba(6,10,24,.55);
+  border-top: 1px solid rgba(120,170,245,.1);
+}
 
-/* Keep the center visible between the two panels */
-@media (min-width: 1301px) {
-  .globe-canvas .player-wrap { padding: 88px 360px 24px 320px; }
-}
-@media (max-width: 1300px) {
-  .globe-canvas .player-wrap { padding: 88px 24px 24px 340px; }
-}
-@media (max-width: 1000px) {
-  .globe-canvas .player-wrap { padding: 80px 20px 20px 300px; }
+/* Make room for the open panels: left = 320px list, right = 360px channels.
+   The player (and title/action bar) shrinks accordingly and grows back to
+   full size when the panels close. */
+@media (min-width: 601px) {
+  .globe-canvas[data-left="open"] .player-wrap .globe-channel-title {
+    padding-left: 340px;
+  }
+  .globe-canvas[data-left="open"] .player-wrap .player-content {
+    padding-left: 340px;
+  }
+  .globe-canvas[data-right="open"] .player-wrap .globe-channel-title {
+    padding-right: 380px;
+  }
+  .globe-canvas[data-right="open"] .player-wrap .player-content {
+    padding-right: 380px;
+  }
+  .globe-canvas[data-right="open"] .player-wrap .player-actions {
+    padding-right: 380px;
+  }
 }
 @media (max-width: 600px) {
-  .globe-canvas .player-wrap { padding: 76px 12px 40px; }
+  .globe-canvas .player-wrap .globe-channel-title { padding: 76px 12px 0; }
+  .globe-canvas .player-wrap .player-content { padding: 12px 12px 4px; }
+  .globe-canvas .player-wrap .player-actions { padding: 8px 12px 12px; }
 }

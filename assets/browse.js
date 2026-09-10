@@ -21,6 +21,15 @@
     return iso;
   }
 
+  function syncPanels() {
+    var canvas = document.getElementById("globe-canvas");
+    if (!canvas) return;
+    var list = document.getElementById("globe-countries-list");
+    var panel = document.getElementById("globe-panel");
+    canvas.setAttribute("data-left", list && list.classList.contains("open") ? "open" : "closed");
+    canvas.setAttribute("data-right", panel && panel.classList.contains("open") ? "open" : "closed");
+  }
+
   function buildCountryIndex() {
     var channels = window.ChannelData.channels || [];
     var byISO = {};
@@ -102,6 +111,7 @@
     updatePanel(iso);
     panel.classList.add("open");
     if (countriesBtn) countriesBtn.classList.remove("active");
+    syncPanels();
   }
 
   function closePanel() {
@@ -110,6 +120,7 @@
     state.selectedISO = null;
     state.panelOpen = false;
     panel.classList.remove("open");
+    syncPanels();
   }
 
   // ---- Left countries menu --------------------------------------------
@@ -121,11 +132,13 @@
     if (force === true) {
       list.classList.add("open");
       if (countriesBtn) countriesBtn.classList.add("active");
+      syncPanels();
       return;
     }
     if (force === false) {
       list.classList.remove("open");
       if (countriesBtn) countriesBtn.classList.remove("active");
+      syncPanels();
       return;
     }
     var isOpen = list.classList.contains("open");
@@ -138,6 +151,7 @@
       if (countriesBtn) countriesBtn.classList.add("active");
       renderCountryList();
     }
+    syncPanels();
   }
 
   function renderCountryList() {
@@ -286,6 +300,22 @@
       var countriesBtn = document.getElementById("countries-panel");
       if (list) list.classList.add("open");
       if (countriesBtn) countriesBtn.classList.add("active");
+    }
+    syncPanels();
+
+    // Clicking the player / placeholder area (anything outside the two
+    // panels and the header) closes the menus so the player takes the
+    // full size again.
+    var canvas = document.getElementById("globe-canvas");
+    if (canvas) {
+      canvas.addEventListener("click", function () {
+        var list = document.getElementById("globe-countries-list");
+        var panel = document.getElementById("globe-panel");
+        var leftOpen = list && list.classList.contains("open");
+        var rightOpen = panel && panel.classList.contains("open");
+        if (leftOpen) toggleCountryList(false);
+        if (rightOpen) closePanel();
+      });
     }
 
     // Wire header search

@@ -38,6 +38,10 @@
       '<div class="ovl" id="ovl-tap" hidden><div class="big">Tap to start playback</div><div class="sub">Your browser requires a tap to play audio and video.</div></div>' +
       '<div class="ovl err" id="ovl-error" hidden><div class="big">The channel is temporarily unavailable.</div><div class="sub" id="err-sub">The live signal could not be loaded.</div></div>';
 
+    var content = document.createElement("div");
+    content.className = "player-content";
+    content.appendChild(player);
+
     var actions = document.createElement("div");
     actions.className = "player-actions";
     actions.innerHTML =
@@ -46,7 +50,8 @@
       '<button class="btn-cast" id="btn-cast" aria-label="Cast to device" title="Cast to TV or monitor"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 9.95 20M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"></path><line x1="2" y1="20" x2="2.01" y2="20"></line></svg></button>' +
       '<button class="btn-fullscreen" id="btn-fullscreen" aria-label="Fullscreen"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"></path></svg></button>';
 
-    wrap.appendChild(player);
+    wrap.appendChild(title);
+    wrap.appendChild(content);
     wrap.appendChild(actions);
 
     container.appendChild(wrap);
