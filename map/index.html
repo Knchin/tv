@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#050816">
-  <meta name="description" content="Tfarraj — explore live TV channels from around the world on an interactive map">
-  <title>Tfarraj · Map</title>
+  <meta name="description" content="Tfarraj — browse live TV channels by country and watch instantly">
+  <title>Tfarraj · Explore</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,13 +15,12 @@
   <link rel="icon" type="image/png" href="/icons/icon-192.png">
   <link rel="stylesheet" href="/assets/app.css">
   <link rel="stylesheet" href="/assets/globe.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous" onerror="window.__mapCDNFailed=true">
   <script src="/assets/channels.js" defer></script>
   <script src="/assets/data/channels.js" defer></script>
 </head>
 <body>
 
-  <!-- Map fills the full viewport -->
+  <!-- Player / browse area fills the full viewport -->
   <div id="globe-canvas" class="globe-canvas"></div>
 
   <!-- Floating header -->
@@ -66,7 +65,7 @@
     </div>
   </header>
 
-  <!-- Country list sidebar (toggled) -->
+  <!-- Country list sidebar (left, toggled by the Countries button) -->
   <aside id="globe-countries-list" class="globe-countries-list">
     <div class="countries-list-header">
       <h2>World</h2>
@@ -80,7 +79,7 @@
     <div id="globe-countries-list-body" class="countries-list-body"></div>
   </aside>
 
-  <!-- Channel panel (right side, slides in when country selected) -->
+  <!-- Channel panel (right side, opens when a country is selected) -->
   <aside id="globe-panel" class="globe-panel">
     <div class="globe-panel-header">
       <div class="globe-panel-title-row">
@@ -100,11 +99,11 @@
     <div id="globe-panel-body" class="globe-panel-body"></div>
   </aside>
 
-  <!-- CDN: Leaflet + TopoJSON client (jsdelivr — unpkg was unreachable in some networks) -->
-  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js" crossorigin="anonymous" onerror="window.__mapCDNFailed=true"></script>
-  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js" crossorigin="anonymous" onerror="window.__mapCDNFailed=true"></script>
+  <!-- HLS playback support (same CDN/version as channel pages) -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
 
-  <script src="/assets/worldmap.js"></script>
+  <script src="/assets/player.js"></script>
+  <script src="/assets/browse.js"></script>
 
   <script>
     if ("serviceWorker" in navigator) {
@@ -115,128 +114,23 @@
       });
     }
 
-    function bootMap() {
+    function bootBrowse() {
       if (!window.ChannelData || !window.ChannelData.channels) return;
-
-      // If a required CDN library failed to load, show fallback instead of a blank screen
-      if (window.__mapCDNFailed || !window.L || !window.topojson) {
-        showFallback("Could not load the map libraries from the CDN.");
-        return;
-      }
-
-      // Fetch world GeoJSON (TopoJSON → GeoJSON) and init the map
-      fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json")
-        .then(function (r) { return r.json(); })
-        .then(function (topo) {
-          var geo = topojson.feature(topo, topo.objects.countries);
-          if (window.TfarrajWorldMap) {
-            window.TfarrajWorldMap.state.features = geo.features;
-            window.TfarrajWorldMap.init();
-          } else {
-            showFallback("Could not initialize the world map.");
-          }
-        })
-        .catch(function (err) {
-          console.error("Failed to load world GeoJSON:", err);
-          showFallback("Could not load the world map data.");
-        });
-
-      function showFallback(msg) {
+      if (window.TfarrajBrowse) {
+        window.TfarrajBrowse.init();
+      } else {
         document.getElementById("globe-canvas").innerHTML =
-          '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#8fa5c7;flex-direction:column;gap:12px;padding:24px;text-align:center">'
-          + '<p style="font-size:18px;color:#eef2ff">' + msg + '</p>'
-          + '<p style="font-size:14px">Check your connection and <a href="/" style="color:#9be7ff">browse channels as a list</a> instead.</p>'
+          '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#ff8f9a;font-size:14px;padding:24px;text-align:center">'
+          + 'Could not initialize the browser. ' + '<a href="/" style="color:#9be7ff">Go back to the channel list</a>.'
           + '</div>';
-      }
-
-      // Wire header search
-      var searchInput = document.getElementById("globe-search-input");
-      var searchClear = document.getElementById("globe-search-clear");
-      if (searchInput) {
-        searchInput.addEventListener("input", function () {
-          searchClear.hidden = !this.value;
-          if (window.TfarrajWorldMap) window.TfarrajWorldMap.onSearch(this.value);
-        });
-        searchInput.addEventListener("keydown", function (e) {
-          if (e.key === "Escape") { this.value = ""; searchClear.hidden = true; if (window.TfarrajWorldMap) window.TfarrajWorldMap.onSearch(""); }
-        });
-      }
-      if (searchClear) {
-        searchClear.addEventListener("click", function () {
-          searchInput.value = ""; this.hidden = true; searchInput.focus();
-          if (window.TfarrajWorldMap) window.TfarrajWorldMap.onSearch("");
-        });
-      }
-
-      // Wire countries panel toggle
-      var countriesBtn = document.getElementById("countries-panel");
-      if (countriesBtn) {
-        countriesBtn.addEventListener("click", function () {
-          if (window.TfarrajWorldMap) window.TfarrajWorldMap.toggleCountryList();
-        });
-      }
-      var countriesClose = document.getElementById("countries-list-close");
-      if (countriesClose) {
-        countriesClose.addEventListener("click", function () {
-          var list = document.getElementById("globe-countries-list");
-          if (list) list.classList.remove("open");
-          if (countriesBtn) countriesBtn.classList.remove("active");
-        });
-      }
-
-      // Wire panel close
-      var panelClose = document.getElementById("panel-close");
-      if (panelClose) {
-        panelClose.addEventListener("click", function () {
-          if (window.TfarrajWorldMap) window.TfarrajWorldMap.closePanel();
-        });
-      }
-
-      // Wire panel search (filters channels within the open country)
-      var panelSearch = document.getElementById("globe-panel-search");
-      if (panelSearch) {
-        panelSearch.addEventListener("input", function () {
-          var q = this.value.toLowerCase().trim();
-          var iso = window.TfarrajWorldMap && window.TfarrajWorldMap.state.selectedISO;
-          if (!iso) return;
-          var all = window.TfarrajWorldMap.state.channelsByCountry[iso] || [];
-          if (!q) {
-            renderPanelChannels(all);
-            return;
-          }
-          var filtered = all.filter(function (ch) {
-            return (ch.name + " " + ch.category + " " + ch.languages.join(" ")).toLowerCase().indexOf(q) !== -1;
-          });
-          renderPanelChannels(filtered);
-        });
-      }
-
-      function renderPanelChannels(channels) {
-        var body = document.getElementById("globe-panel-body");
-        if (!body) return;
-        if (!channels.length) { body.innerHTML = '<div class="panel-empty">No channels match your search</div>'; return; }
-        var html = '<div class="globe-channel-list">';
-        channels.slice().sort(function (a, b) { return a.name.localeCompare(b.name); }).forEach(function (ch) {
-          html += '<a class="globe-channel-card" href="/channel/' + ch.slug + '/" title="' + ch.name + '">'
-            + '<div class="globe-channel-info">'
-            + '<div class="globe-channel-name">' + ch.name + '</div>'
-            + '<div class="globe-channel-meta">'
-            + (ch.country ? '<span class="channel-country">' + ch.country + '</span>' : '')
-            + (ch.category && ch.category !== "general" ? '<span class="channel-tag">' + ch.category + '</span>' : '')
-            + '</div></div>'
-            + '<div class="globe-channel-live"><span class="live-dot"></span><span class="live-text">LIVE</span></div>'
-            + '</a>';
-        });
-        html += '</div>';
-        body.innerHTML = html;
       }
     }
 
     // Start
     if (window.ChannelData && window.ChannelData.channels) {
-      bootMap();
+      bootBrowse();
     } else {
-      window.addEventListener("channeldata:ready", bootMap);
+      window.addEventListener("channeldata:ready", bootBrowse);
     }
   </script>
 
