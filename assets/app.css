@@ -43,6 +43,23 @@ body {
   box-shadow: 0 4px 14px rgba(22,119,255,.4);
 }
 .app-header h1 { font-size: 18px; font-weight: 800; letter-spacing: -.02em; margin-right: auto; }
+.map-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: 10px;
+  border: 1px solid rgba(120,170,245,.3);
+  background: rgba(22,119,255,.12);
+  color: #9be7ff; font-size: 13px; font-weight: 700;
+  cursor: pointer; text-decoration: none; white-space: nowrap;
+  transition: background .15s, border-color .15s, box-shadow .2s;
+}
+.map-btn:hover {
+  background: rgba(22,119,255,.25);
+  border-color: rgba(22,119,255,.5);
+  box-shadow: 0 0 14px rgba(22,119,255,.25);
+  color: #fff;
+}
+.map-btn-label { display: none; }
+@media (min-width: 540px) { .map-btn-label { display: inline; } }
 .app-header .back {
   display: inline-flex; align-items: center; gap: 6px;
   color: #9be7ff; background: rgba(22,119,255,.12);

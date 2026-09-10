@@ -7,23 +7,26 @@
  *    MUST re-fetch these from the network to get the freshest token and never
  *    serve a stale cached token. Live video segments are never cached here.
  */
-var VERSION = "v10";
+var VERSION = "v12";
 var SHELL_CACHE = "tfarraj-shell-" + VERSION;
 
 var PRECACHE = [
   "/",
+  "/map/",
   "/channel/lb2/",
   "/channel/alhadath/",
   "/assets/app.css",
+  "/assets/globe.css",
   "/assets/player.js",
   "/assets/channels.js",
+  "/assets/globe.js",
   "/manifest.webmanifest",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
 ];
 
 // Always network-first (fresh token / navigation): HTML pages + channel config + data layer.
-var ALWAYS_NETWORK_FIRST = ["/channel/", "/assets/channels.js", "/assets/data/channels.js", "/assets/home.js", "/assets/player.js"];
+var ALWAYS_NETWORK_FIRST = ["/channel/", "/map/", "/assets/channels.js", "/assets/data/channels.js", "/assets/home.js", "/assets/player.js"];
 
 function isNetworkFirst(url) {
   return url.pathname === "/" || ALWAYS_NETWORK_FIRST.some(function (p) {

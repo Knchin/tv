@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#050816">
+  <meta name="description" content="Tfarraj — explore live TV channels from around the world on an interactive globe">
+  <title>Tfarraj · Map</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Tfarraj">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="icon" type="image/png" href="/icons/icon-192.png">
+  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="stylesheet" href="/assets/globe.css">
+  <script src="/assets/channels.js" defer></script>
+  <script src="/assets/data/channels.js" defer></script>
+</head>
+<body>
+
+  <!-- Globe fills the full viewport -->
+  <div id="globe-canvas" class="globe-canvas"></div>
+
+  <!-- Tooltip (positioned absolutely) -->
+  <div id="globe-tooltip" class="globe-tooltip"></div>
+
+  <!-- Floating header -->
+  <header class="globe-header">
+    <div class="globe-header-left">
+      <a href="/" class="logo" aria-label="Back to home" title="Back to home">T</a>
+      <h1 class="globe-title">Live Channels</h1>
+    </div>
+    <div class="globe-header-center">
+      <div class="globe-search">
+        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="search" id="globe-search-input" class="globe-search-input"
+               placeholder="Search channels or countries…" autocomplete="off" spellcheck="false"
+               aria-label="Search channels or countries">
+        <button type="button" id="globe-search-clear" class="globe-search-clear" aria-label="Clear search" hidden>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="globe-header-right">
+      <a href="/" class="globe-btn" aria-label="Back to home" title="Back to channel list">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+        <span class="globe-btn-label">Home</span>
+      </a>
+      <button type="button" id="countries-panel" class="globe-btn" aria-label="Browse countries" title="Browse countries">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="2" y1="12" x2="22" y2="12"></line>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+        </svg>
+        <span class="globe-btn-label">Countries</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Country list sidebar (toggled) -->
+  <aside id="globe-countries-list" class="globe-countries-list">
+    <div class="countries-list-header">
+      <h2>World</h2>
+      <button type="button" id="countries-list-close" class="globe-btn-icon" aria-label="Close countries list">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+    <div id="globe-countries-list-body" class="countries-list-body"></div>
+  </aside>
+
+  <!-- Channel panel (right side, slides in when country selected) -->
+  <aside id="globe-panel" class="globe-panel">
+    <div class="globe-panel-header">
+      <div class="globe-panel-title-row">
+        <h2 id="globe-panel-title" class="globe-panel-title">Country</h2>
+        <button type="button" id="panel-close" class="globe-btn-icon" aria-label="Close panel">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div id="globe-panel-count" class="globe-panel-count">0 channels</div>
+      <input type="search" id="globe-panel-search" class="globe-panel-search"
+             placeholder="Search channels…" autocomplete="off" spellcheck="false"
+             aria-label="Search channels in this country">
+    </div>
+    <div id="globe-panel-body" class="globe-panel-body"></div>
+  </aside>
+
+  <!-- CDN: Three.js, TopoJSON client, Globe.gl -->
+  <script src="https://unpkg.com/three@0.160.0/build/three.min.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/topojson-client@3.1.0/dist/topojson-client.min.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/globe.gl@2.31.1/dist/globe.gl.min.js" crossorigin="anonymous"></script>
+
+  <script src="/assets/globe.js"></script>
+
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("/sw.js").catch(function (err) {
+          console.error("SW registration failed:", err);
+        });
+      });
+    }
+
+    function bootGlobe() {
+      if (!window.ChannelData || !window.ChannelData.channels) return;
+
+      // Fetch world GeoJSON (TopoJSON → GeoJSON) and init globe
+      fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json")
+        .then(function (r) { return r.json(); })
+        .then(function (topo) {
+          var geo = topojson.feature(topo, topo.objects.countries);
+          if (window.TfarrajGlobe) {
+            window.TfarrajGlobe.state.features = geo.features;
+            window.TfarrajGlobe.init();
+          }
+        })
+        .catch(function (err) {
+          console.error("Failed to load world GeoJSON:", err);
+          document.getElementById("globe-canvas").innerHTML =
+            '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#8fa5c7;flex-direction:column;gap:12px;padding:24px;text-align:center">'
+            + '<p style="font-size:18px;color:#eef2ff">Could not load the world map</p>'
+            + '<p style="font-size:14px">Check your connection and <a href="/" style="color:#9be7ff">browse channels as a list</a> instead.</p>'
+            + '</div>';
+        });
+
+      // Wire header search
+      var searchInput = document.getElementById("globe-search-input");
+      var searchClear = document.getElementById("globe-search-clear");
+      if (searchInput) {
+        searchInput.addEventListener("input", function () {
+          searchClear.hidden = !this.value;
+          if (window.TfarrajGlobe) window.TfarrajGlobe.onSearch(this.value);
+        });
+        searchInput.addEventListener("keydown", function (e) {
+          if (e.key === "Escape") { this.value = ""; searchClear.hidden = true; if (window.TfarrajGlobe) window.TfarrajGlobe.onSearch(""); }
+        });
+      }
+      if (searchClear) {
+        searchClear.addEventListener("click", function () {
+          searchInput.value = ""; this.hidden = true; searchInput.focus();
+          if (window.TfarrajGlobe) window.TfarrajGlobe.onSearch("");
+        });
+      }
+
+      // Wire countries panel toggle
+      var countriesBtn = document.getElementById("countries-panel");
+      if (countriesBtn) {
+        countriesBtn.addEventListener("click", function () {
+          if (window.TfarrajGlobe) window.TfarrajGlobe.toggleCountryList();
+        });
+      }
+      var countriesClose = document.getElementById("countries-list-close");
+      if (countriesClose) {
+        countriesClose.addEventListener("click", function () {
+          var list = document.getElementById("globe-countries-list");
+          if (list) list.classList.remove("open");
+          if (countriesBtn) countriesBtn.classList.remove("active");
+        });
+      }
+
+      // Wire panel close
+      var panelClose = document.getElementById("panel-close");
+      if (panelClose) {
+        panelClose.addEventListener("click", function () {
+          if (window.TfarrajGlobe) window.TfarrajGlobe.closePanel();
+        });
+      }
+
+      // Wire panel search (filters channels within the open country)
+      var panelSearch = document.getElementById("globe-panel-search");
+      if (panelSearch) {
+        panelSearch.addEventListener("input", function () {
+          var q = this.value.toLowerCase().trim();
+          var iso = window.TfarrajGlobe && window.TfarrajGlobe.state.selectedISO;
+          if (!iso) return;
+          var all = window.TfarrajGlobe.state.channelsByCountry[iso] || [];
+          if (!q) {
+            renderPanelChannels(all);
+            return;
+          }
+          var filtered = all.filter(function (ch) {
+            return (ch.name + " " + ch.category + " " + ch.languages.join(" ")).toLowerCase().indexOf(q) !== -1;
+          });
+          renderPanelChannels(filtered);
+        });
+      }
+
+      function renderPanelChannels(channels) {
+        var body = document.getElementById("globe-panel-body");
+        if (!body) return;
+        if (!channels.length) { body.innerHTML = '<div class="panel-empty">No channels match your search</div>'; return; }
+        var html = '<div class="globe-channel-list">';
+        channels.slice().sort(function (a, b) { return a.name.localeCompare(b.name); }).forEach(function (ch) {
+          html += '<a class="globe-channel-card" href="/channel/' + ch.slug + '/" title="' + ch.name + '">'
+            + '<div class="globe-channel-info">'
+            + '<div class="globe-channel-name">' + ch.name + '</div>'
+            + '<div class="globe-channel-meta">'
+            + (ch.country ? '<span class="channel-country">' + ch.country + '</span>' : '')
+            + (ch.category && ch.category !== "general" ? '<span class="channel-tag">' + ch.category + '</span>' : '')
+            + '</div></div>'
+            + '<div class="globe-channel-live"><span class="live-dot"></span><span class="live-text">LIVE</span></div>'
+            + '</a>';
+        });
+        html += '</div>';
+        body.innerHTML = html;
+      }
+    }
+
+    // Start
+    if (window.ChannelData && window.ChannelData.channels) {
+      bootGlobe();
+    } else {
+      window.addEventListener("channeldata:ready", bootGlobe);
+    }
+  </script>
+
+</body>
+</html>
