@@ -58,16 +58,6 @@ async function mint() {
 
 async function main() {
   const url = await mint();
-  const file = "assets/channels.js";
-  let html = fs.readFileSync(file, "utf8");
-  // Match "url": "..." pattern in the JSON-like format
-  const re = /("url"\s*:\s*")[^"]+(")/;
-  const m = html.match(re);
-  if (!m) throw new Error("Channel url not found in " + file);
-  if (m[1].indexOf(url) !== -1) {
-    console.log("Token unchanged, nothing to update.");
-    return false;
-  }
   // Verify the new URL really serves an HLS playlist BEFORE writing anything,
   // so a dead/403 token (e.g. from a datacenter egress IP) is never committed.
   const check = await fetch(url);
@@ -76,10 +66,27 @@ async function main() {
   if (body.trim().indexOf("#EXTM3U") !== 0) {
     throw new Error("New URL is not a valid HLS playlist (status " + check.status + ")");
   }
-  html = html.replace(re, m[1] + url + m[2]);
-  fs.writeFileSync(file, html);
-  console.log("Updated channel url (verified " + check.status + ").");
-  return true;
+  // Match "url": "..." in both the channels.js catalog and the canonical JSON
+  // used by build.py to regenerate player pages (LB2 is the first entry, so
+  // the first match in each file targets it).
+  const re = /("url"\s*:\s*")[^"]+(")/;
+  let changed = false;
+  for (const file of ["assets/channels.js", "assets/channels_canonical.json"]) {
+    const content = fs.readFileSync(file, "utf8");
+    const m = content.match(re);
+    if (!m) throw new Error("Channel url not found in " + file);
+    if (m[0] === m[1] + url + m[2]) {
+      console.log(file + ": token unchanged");
+      continue;
+    }
+    if (m[0] !== m[1] + url + m[2]) {
+      fs.writeFileSync(file, content.replace(m[0], m[1] + url + m[2]));
+      console.log("Updated " + file + " (verified " + check.status + ").");
+      changed = true;
+    }
+  }
+  if (!changed) console.log("Token unchanged, nothing to update.");
+  return changed;
 }
 
 main()
