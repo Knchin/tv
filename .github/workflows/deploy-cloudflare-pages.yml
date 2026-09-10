@@ -11,57 +11,5 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      deployments: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install Wrangler
-        run: npm install -g wrangler@3.114.17
-
-      - name: Prepare static assets
-        run: |
-          mkdir -p dist
-          cp index.html dist/
-          cp -r map dist/map
-          cp -r channel dist/channel
-          cp -r assets dist/assets
-          cp -r icons dist/icons
-          cp manifest.webmanifest dist/
-          cp sw.js dist/
-          cp _headers dist/
-          cp -r functions dist/functions
-          echo "--- dist tree ---"
-          find dist -type f | sort
-
-      - name: Ensure Cloudflare Pages project exists
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_PROJECT_NAME: ${{ vars.CLOUDFLARE_PROJECT_NAME }}
-        run: |
-          if ! wrangler pages project list | grep -wq "$CLOUDFLARE_PROJECT_NAME"; then
-            echo "Creating Pages project $CLOUDFLARE_PROJECT_NAME..."
-            wrangler pages project create "$CLOUDFLARE_PROJECT_NAME" --production-branch=main
-          else
-            echo "Pages project $CLOUDFLARE_PROJECT_NAME already exists"
-          fi
-
-      - name: Deploy to Cloudflare Pages
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_PROJECT_NAME: ${{ vars.CLOUDFLARE_PROJECT_NAME }}
-        run: |
-          wrangler pages deploy dist \
-            --project-name="$CLOUDFLARE_PROJECT_NAME" \
-            --branch=main \
-            --commit-dirty=true
+    uses: ./.github/workflows/deploy.yml
+    secrets: inherit

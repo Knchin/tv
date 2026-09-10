@@ -17,6 +17,8 @@ permissions:
 jobs:
   refresh:
     runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.commit.outputs.changed }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,6 +37,7 @@ jobs:
         run: python3 scripts/build.py
 
       - name: Commit fresh token if changed
+        id: commit
         run: |
           if [ -n "$(git status --porcelain)" ]; then
             git config user.name "github-actions[bot]"
@@ -43,6 +46,16 @@ jobs:
             git commit -m "chore: refresh LB2 stream token (auto)"
             git push
             echo "Pushed refreshed token."
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "No token change; nothing to push."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
+
+  # GITHUB_TOKEN pushes don't trigger the on:push deploy workflow, so call
+  # the deploy workflow directly after a token refresh commit.
+  deploy:
+    needs: refresh
+    if: needs.refresh.outputs.changed == 'true'
+    uses: ./.github/workflows/deploy.yml
+    secrets: inherit
