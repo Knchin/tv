@@ -160,7 +160,7 @@
     var countries = (window.ChannelData.countries || []).filter(function (c) {
       return c.code && c.code !== "XX" && c.count > 0;
     });
-    countries.sort(function (a, b) { return b.count - a.count; });
+    countries.sort(function (a, b) { return a.name.localeCompare(b.name); });
 
     var html = '<div class="country-list-search">'
       + '<input type="search" id="country-list-search-input" placeholder="Search countries…" autocomplete="off" spellcheck="false">'
