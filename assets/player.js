@@ -6,7 +6,7 @@
 //      #ovl-loading, #ovl-tap, #ovl-error, #err-sub. The player initializes on
 //      this existing DOM.
 //   2. In-page mounting: window.TfarrajPlayer.mount(container, channel) builds
-//      the player markup inside any element (used by the /map/ browse page).
+//      the player markup inside any element (used by the home browse page).
 //
 // LB2 is served through a Cloudflare Function proxy (/api/stream) because
 // games1.elahmad.store binds tokens to the minting IP — a token minted

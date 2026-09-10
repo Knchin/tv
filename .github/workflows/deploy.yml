@@ -27,6 +27,7 @@ jobs:
           cp index.html dist/
           cp -r map dist/map
           cp -r channel dist/channel
+          cp -r channels dist/channels
           cp -r assets dist/assets
           cp -r icons dist/icons
           cp manifest.webmanifest dist/

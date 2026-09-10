@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#050816">
+  <meta name="description" content="Tfarraj Live TV — live channels from around the world">
+  <title>Tfarraj · Live Channels</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Tfarraj">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="icon" type="image/png" href="/icons/icon-192.png">
+  <link rel="stylesheet" href="/assets/app.css">
+  <script src="/assets/channels.js" defer></script>
+  <script src="/assets/data/channels.js" defer></script>
+</head>
+<body>
+  <div class="home-layout">
+
+    <div class="wrap">
+      <header class="app-header">
+        <div class="logo">T</div>
+        <h1>Live Channels</h1>
+        <a href="/" class="map-btn" aria-label="Back to home" title="Back to home">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+          </svg>
+          <span class="map-btn-label">Home</span>
+        </a>
+        <button class="search-toggle" id="search-toggle" aria-label="Search channels" aria-expanded="false">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </button>
+      </header>
+
+      <!-- Search and Filter Bar -->
+      <div class="search-filter-bar" id="search-filter-bar" hidden>
+        <div class="search-input-wrapper">
+          <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="search" id="search-input" placeholder="Search channels..." aria-label="Search channels" autocomplete="off" spellcheck="false">
+          <button type="button" id="search-clear" class="search-clear" aria-label="Clear search" hidden>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <div class="filter-controls">
+          <select id="country-filter" aria-label="Filter by country">
+            <option value="all">All Countries</option>
+          </select>
+          <select id="category-filter" aria-label="Filter by category">
+            <option value="all">All Categories</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Results info -->
+      <div class="results-info" id="results-info" hidden>
+        <span id="results-count">0</span> channels
+        <button type="button" id="clear-filters" class="clear-filters-btn" hidden>Clear filters</button>
+      </div>
+
+      <!-- Recently Watched Section -->
+      <section id="recently-watched" class="recently-watched" hidden>
+        <div class="section-header">
+          <h2>Recently Watched</h2>
+        </div>
+        <div class="channel-grid" id="recently-watched-grid"></div>
+      </section>
+
+      <!-- Favorites Section -->
+      <section id="favorites" class="favorites-section" hidden>
+        <div class="section-header">
+          <h2>Favorites</h2>
+        </div>
+        <div class="channel-grid" id="favorites-grid"></div>
+      </section>
+
+      <!-- All Channels Section -->
+      <section id="all-channels">
+        <div class="section-header">
+          <h2>All Channels</h2>
+        </div>
+
+        <div class="channel-grid" id="channel-grid"></div>
+
+        <nav class="pagination" id="pagination" aria-label="Pagination">
+          <button type="button" id="page-prev" class="page-btn" aria-label="Previous page">‹ Prev</button>
+          <div class="page-numbers" id="page-numbers"></div>
+          <button type="button" id="page-next" class="page-btn" aria-label="Next page">Next ›</button>
+        </nav>
+      </section>
+
+      <!-- No results state -->
+      <div class="no-results" id="no-results" hidden>
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <h3>No channels found</h3>
+        <p>Try adjusting your search or filters</p>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">© 2026 Tfarraj · All rights reserved</footer>
+
+  <script src="/assets/home.js" defer></script>
+  <script>
+    // Register the service worker for PWA installability + app-shell caching.
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("/sw.js").catch(function (err) {
+          console.error("SW registration failed:", err);
+        });
+      });
+    }
+  </script>
+</body>
+</html>

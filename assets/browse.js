@@ -1,7 +1,7 @@
 // Tfarraj Browse — countries -> channels -> player.
-// Replaces the old interactive map on /map/. Left menu lists countries,
-// right panel lists that country's channels, and clicking a channel mounts
-// the live player in the center area. No map libraries needed.
+// The principal home page: left menu lists countries, the right panel lists
+// that country's channels, and clicking a channel mounts the live player in
+// the center area. No map libraries needed.
 
 (function () {
   "use strict";
