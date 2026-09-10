@@ -7,7 +7,7 @@
  *    MUST re-fetch these from the network to get the freshest token and never
  *    serve a stale cached token. Live video segments are never cached here.
  */
-var VERSION = "v12";
+var VERSION = "v13";
 var SHELL_CACHE = "tfarraj-shell-" + VERSION;
 
 var PRECACHE = [
@@ -19,7 +19,7 @@ var PRECACHE = [
   "/assets/globe.css",
   "/assets/player.js",
   "/assets/channels.js",
-  "/assets/globe.js",
+  "/assets/worldmap.js",
   "/manifest.webmanifest",
   "/icons/icon-192.png",
   "/icons/icon-512.png",

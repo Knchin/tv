@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#050816">
-  <meta name="description" content="Tfarraj — explore live TV channels from around the world on an interactive globe">
+  <meta name="description" content="Tfarraj — explore live TV channels from around the world on an interactive map">
   <title>Tfarraj · Map</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="mobile-web-app-capable" content="yes">
@@ -15,16 +15,14 @@
   <link rel="icon" type="image/png" href="/icons/icon-192.png">
   <link rel="stylesheet" href="/assets/app.css">
   <link rel="stylesheet" href="/assets/globe.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous" onerror="window.__mapCDNFailed=true">
   <script src="/assets/channels.js" defer></script>
   <script src="/assets/data/channels.js" defer></script>
 </head>
 <body>
 
-  <!-- Globe fills the full viewport -->
+  <!-- Map fills the full viewport -->
   <div id="globe-canvas" class="globe-canvas"></div>
-
-  <!-- Tooltip (positioned absolutely) -->
-  <div id="globe-tooltip" class="globe-tooltip"></div>
 
   <!-- Floating header -->
   <header class="globe-header">
@@ -102,12 +100,11 @@
     <div id="globe-panel-body" class="globe-panel-body"></div>
   </aside>
 
-  <!-- CDN: Three.js, TopoJSON client, Globe.gl -->
-  <script src="https://unpkg.com/three@0.160.0/build/three.min.js" crossorigin="anonymous" onerror="window.__globeCDNFailed=true"></script>
-  <script src="https://unpkg.com/topojson-client@3.1.0/dist/topojson-client.min.js" crossorigin="anonymous" onerror="window.__globeCDNFailed=true"></script>
-  <script src="https://unpkg.com/globe.gl@2.46.2/dist/globe.gl.min.js" crossorigin="anonymous" onerror="window.__globeCDNFailed=true"></script>
+  <!-- CDN: Leaflet + TopoJSON client (jsdelivr — unpkg was unreachable in some networks) -->
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js" crossorigin="anonymous" onerror="window.__mapCDNFailed=true"></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js" crossorigin="anonymous" onerror="window.__mapCDNFailed=true"></script>
 
-  <script src="/assets/globe.js"></script>
+  <script src="/assets/worldmap.js"></script>
 
   <script>
     if ("serviceWorker" in navigator) {
@@ -118,25 +115,25 @@
       });
     }
 
-    function bootGlobe() {
+    function bootMap() {
       if (!window.ChannelData || !window.ChannelData.channels) return;
 
-      // If a required CDN library failed to load, show fallback instead of a black screen
-      if (window.__globeCDNFailed || !window.Globe || !window.topojson) {
-        showFallback("Could not load the 3D map libraries from the CDN.");
+      // If a required CDN library failed to load, show fallback instead of a blank screen
+      if (window.__mapCDNFailed || !window.L || !window.topojson) {
+        showFallback("Could not load the map libraries from the CDN.");
         return;
       }
 
-      // Fetch world GeoJSON (TopoJSON → GeoJSON) and init globe
+      // Fetch world GeoJSON (TopoJSON → GeoJSON) and init the map
       fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json")
         .then(function (r) { return r.json(); })
         .then(function (topo) {
           var geo = topojson.feature(topo, topo.objects.countries);
-          if (window.TfarrajGlobe) {
-            window.TfarrajGlobe.state.features = geo.features;
-            window.TfarrajGlobe.init();
+          if (window.TfarrajWorldMap) {
+            window.TfarrajWorldMap.state.features = geo.features;
+            window.TfarrajWorldMap.init();
           } else {
-            showFallback("Could not initialize the interactive map.");
+            showFallback("Could not initialize the world map.");
           }
         })
         .catch(function (err) {
@@ -158,16 +155,16 @@
       if (searchInput) {
         searchInput.addEventListener("input", function () {
           searchClear.hidden = !this.value;
-          if (window.TfarrajGlobe) window.TfarrajGlobe.onSearch(this.value);
+          if (window.TfarrajWorldMap) window.TfarrajWorldMap.onSearch(this.value);
         });
         searchInput.addEventListener("keydown", function (e) {
-          if (e.key === "Escape") { this.value = ""; searchClear.hidden = true; if (window.TfarrajGlobe) window.TfarrajGlobe.onSearch(""); }
+          if (e.key === "Escape") { this.value = ""; searchClear.hidden = true; if (window.TfarrajWorldMap) window.TfarrajWorldMap.onSearch(""); }
         });
       }
       if (searchClear) {
         searchClear.addEventListener("click", function () {
           searchInput.value = ""; this.hidden = true; searchInput.focus();
-          if (window.TfarrajGlobe) window.TfarrajGlobe.onSearch("");
+          if (window.TfarrajWorldMap) window.TfarrajWorldMap.onSearch("");
         });
       }
 
@@ -175,7 +172,7 @@
       var countriesBtn = document.getElementById("countries-panel");
       if (countriesBtn) {
         countriesBtn.addEventListener("click", function () {
-          if (window.TfarrajGlobe) window.TfarrajGlobe.toggleCountryList();
+          if (window.TfarrajWorldMap) window.TfarrajWorldMap.toggleCountryList();
         });
       }
       var countriesClose = document.getElementById("countries-list-close");
@@ -191,7 +188,7 @@
       var panelClose = document.getElementById("panel-close");
       if (panelClose) {
         panelClose.addEventListener("click", function () {
-          if (window.TfarrajGlobe) window.TfarrajGlobe.closePanel();
+          if (window.TfarrajWorldMap) window.TfarrajWorldMap.closePanel();
         });
       }
 
@@ -200,9 +197,9 @@
       if (panelSearch) {
         panelSearch.addEventListener("input", function () {
           var q = this.value.toLowerCase().trim();
-          var iso = window.TfarrajGlobe && window.TfarrajGlobe.state.selectedISO;
+          var iso = window.TfarrajWorldMap && window.TfarrajWorldMap.state.selectedISO;
           if (!iso) return;
-          var all = window.TfarrajGlobe.state.channelsByCountry[iso] || [];
+          var all = window.TfarrajWorldMap.state.channelsByCountry[iso] || [];
           if (!q) {
             renderPanelChannels(all);
             return;
@@ -237,9 +234,9 @@
 
     // Start
     if (window.ChannelData && window.ChannelData.channels) {
-      bootGlobe();
+      bootMap();
     } else {
-      window.addEventListener("channeldata:ready", bootGlobe);
+      window.addEventListener("channeldata:ready", bootMap);
     }
   </script>
 
