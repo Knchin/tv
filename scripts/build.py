@@ -62,6 +62,7 @@ def generate_channel_page(channel):
     parts.append('<head>')
     parts.append('  <meta charset="UTF-8">')
     parts.append('  <meta name="viewport" content="width=device-width, initial-scale=1.0">')
+    parts.append('  <meta name="referrer" content="no-referrer">')
     parts.append('  <meta name="theme-color" content="#050816">')
     parts.append('  <meta name="description" content="' + escaped_name + ' \u2014 Live Stream">')
     parts.append('  <title>' + escaped_name + ' \u00b7 Live Stream</title>')
