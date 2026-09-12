@@ -6,7 +6,7 @@ window.CHANNELS = [
     "name": "LB2",
     "description": "Live stream",
     "type": "hls",
-"url": "https://games1.elahmad.store/tv15_www_elahmad._lb2/index.m3u8?token=9ba2bf76d64a904e8a4a01d33e39e9c9b518f9f4-354ce8e80b03221507a4dd6f9471a768-1789171026-1789169226",
+"url": "https://games1.elahmad.store/tv15_www_elahmad._lb2/index.m3u8?token=6f8d30756a9470090c4dd4a99b74e1bb10ad243a-26c7bf89a4b28b0510183fdbf5712c5a-1789178139-1789176339",
     "slug": "lb2",
     "country": "Lebanon",
     "countryCode": "lb",
