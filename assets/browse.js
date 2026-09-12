@@ -10,8 +10,19 @@
     channelsByCountry: {},
     selectedISO: null,
     panelOpen: false,
-    initialized: false
+    initialized: false,
+    countryList: [],
+    panelMode: 'country', // 'country' | 'results'
+    panelResults: [],
+    panelQuery: '',
+    searchTimer: null
   };
+
+  function escapeHtml(text) {
+    var div = document.createElement("div");
+    div.textContent = String(text == null ? "" : text);
+    return div.innerHTML;
+  }
 
   function countryName(iso) {
     var countries = window.ChannelData.countries || [];
@@ -60,12 +71,12 @@
       + '</button>';
   }
 
-  function renderChannelList(channels, container) {
+  function renderChannelList(channels, container, keepOrder) {
     if (!channels || !channels.length) {
-      container.innerHTML = '<div class="panel-empty">No channels available</div>';
+      container.innerHTML = '<div class="panel-empty">No channels found</div>';
       return;
     }
-    var sorted = channels.slice().sort(function (a, b) {
+    var sorted = keepOrder ? channels : channels.slice().sort(function (a, b) {
       return a.name.localeCompare(b.name);
     });
     var html = '<div class="globe-channel-list">';
@@ -87,28 +98,61 @@
     });
   }
 
-  function updatePanel(iso) {
+  function updatePanel(opts) {
     var panelBody = document.getElementById("globe-panel-body");
     var panelTitle = document.getElementById("globe-panel-title");
     var panelCount = document.getElementById("globe-panel-count");
     var panelSearch = document.getElementById("globe-panel-search");
-    var channels = state.channelsByCountry[iso] || [];
-    var name = countryName(iso);
+    if (!panelBody || !panelTitle || !panelCount) return;
+    var channels = opts.channels || [];
+    panelTitle.textContent = opts.title || "";
+    panelCount.textContent = opts.countLabel !== undefined
+      ? opts.countLabel
+      : channels.length + " channel" + (channels.length !== 1 ? "s" : "");
+    if (panelSearch) {
+      panelSearch.placeholder = opts.placeholder || "Search channels…";
+      if (opts.clearSearch) panelSearch.value = "";
+    }
+    renderChannelList(channels, panelBody, !!opts.keepOrder);
+  }
 
-    panelTitle.textContent = name;
-    panelCount.textContent = channels.length + " channel" + (channels.length !== 1 ? "s" : "");
-    panelSearch.value = "";
-    panelSearch.placeholder = "Search " + name + " channels…";
-    renderChannelList(channels, panelBody);
+  function renderCountryPanel(iso) {
+    var name = countryName(iso);
+    state.panelMode = "country";
+    state.selectedISO = iso;
+    state.panelQuery = "";
+    var channels = state.channelsByCountry[iso] || [];
+    state.panelResults = channels.slice();
+    updatePanel({
+      channels: channels,
+      title: name,
+      countLabel: channels.length + " channel" + (channels.length !== 1 ? "s" : ""),
+      placeholder: "Search " + name + " channels…",
+      clearSearch: true
+    });
+  }
+
+  function renderResultsPanel(query) {
+    var results = window.ChannelData.searchAllChannels(query);
+    state.panelMode = "results";
+    state.panelQuery = query;
+    state.panelResults = results.slice();
+    updatePanel({
+      channels: results.slice(0, 250),
+      title: 'Results for "' + query + '"',
+      countLabel: results.length + " channel" + (results.length !== 1 ? "s" : ""),
+      placeholder: "Filter results…",
+      keepOrder: true,
+      clearSearch: true
+    });
   }
 
   function openPanel(iso) {
     var panel = document.getElementById("globe-panel");
     var countriesBtn = document.getElementById("countries-panel");
     if (!panel) return;
-    state.selectedISO = iso;
     state.panelOpen = true;
-    updatePanel(iso);
+    renderCountryPanel(iso);
     panel.classList.add("open");
     if (countriesBtn) countriesBtn.classList.remove("active");
     syncPanels();
@@ -119,6 +163,9 @@
     if (!panel) return;
     state.selectedISO = null;
     state.panelOpen = false;
+    state.panelMode = "country";
+    state.panelQuery = "";
+    state.panelResults = [];
     panel.classList.remove("open");
     syncPanels();
   }
@@ -157,28 +204,43 @@
   function renderCountryList() {
     var container = document.getElementById("globe-countries-list-body");
     if (!container) return;
-    var countries = (window.ChannelData.countries || []).filter(function (c) {
-      return c.code && c.code !== "XX" && c.count > 0;
-    });
-    countries.sort(function (a, b) { return a.name.localeCompare(b.name); });
 
     var html = '<div class="country-list-search">'
       + '<input type="search" id="country-list-search-input" placeholder="Search countries…" autocomplete="off" spellcheck="false">'
       + '</div>'
-      + '<div class="country-list-items" id="country-list-items">';
+      + '<div class="country-list-items" id="country-list-items"></div>';
+    container.innerHTML = html;
 
-    countries.forEach(function (c) {
+    renderIntoCountryItems("");
+
+    var searchInput = document.getElementById("country-list-search-input");
+    if (searchInput) {
+      searchInput.addEventListener("input", function () {
+        renderIntoCountryItems(this.value.trim());
+      });
+    }
+  }
+
+  function renderIntoCountryItems(q) {
+    var itemsBox = document.getElementById("country-list-items");
+    if (!itemsBox) return;
+    var filtered = window.ChannelData.searchCountries(q);
+
+    if (!filtered.length) {
+      itemsBox.innerHTML = '<div class="panel-empty">No countries match "' + escapeHtml(q) + '"</div>';
+      return;
+    }
+
+    var html = "";
+    filtered.forEach(function (c) {
       html += '<button class="country-list-item" data-iso="' + c.code + '">'
         + '<span class="country-list-name">' + c.name + '</span>'
         + '<span class="country-list-count">' + c.count + '</span>'
         + '</button>';
     });
+    itemsBox.innerHTML = html;
 
-    html += '</div>';
-    container.innerHTML = html;
-
-    var items = container.querySelectorAll(".country-list-item");
-    items.forEach(function (btn) {
+    itemsBox.querySelectorAll(".country-list-item").forEach(function (btn) {
       btn.addEventListener("click", function () {
         var iso = btn.getAttribute("data-iso");
         selectCountry(iso);
@@ -186,20 +248,8 @@
       });
     });
 
-    var searchInput = document.getElementById("country-list-search-input");
-    if (searchInput) {
-      searchInput.addEventListener("input", function () {
-        var q = this.value.toLowerCase().trim();
-        items.forEach(function (item) {
-          var name = item.querySelector(".country-list-name").textContent.toLowerCase();
-          item.style.display = (!q || name.indexOf(q) !== -1) ? "" : "none";
-        });
-      });
-    }
-
-    // Highlight the selected country
     if (state.selectedISO) {
-      container.querySelectorAll(".country-list-item").forEach(function (item) {
+      itemsBox.querySelectorAll(".country-list-item").forEach(function (item) {
         item.classList.toggle("active", item.getAttribute("data-iso") === state.selectedISO);
       });
     }
@@ -246,40 +296,56 @@
   // ---- Global header search -------------------------------------------
 
   function onGlobalSearch(query) {
-    if (!query || !query.trim()) {
+    var q = query ? query.trim() : "";
+    if (!q) {
+      if (state.searchTimer) { clearTimeout(state.searchTimer); state.searchTimer = null; }
       closePanel();
       renderCountryList();
       return;
     }
-    var q = query.toLowerCase().trim();
-    var countries = window.ChannelData.countries || [];
-    var matchCountry = null;
-    for (var i = 0; i < countries.length; i++) {
-      if (countries[i].name.toLowerCase().indexOf(q) !== -1) {
-        matchCountry = countries[i];
-        break;
-      }
+    if (state.searchTimer) clearTimeout(state.searchTimer);
+    state.searchTimer = setTimeout(function () {
+      state.searchTimer = null;
+      dispatchGlobalSearch(q);
+    }, 140);
+  }
+
+  function dispatchGlobalSearch(q) {
+    var ranked = window.ChannelData.searchCountries(q);
+    var top = ranked.length ? ranked[0] : null;
+    var qlen = q.length;
+    var codeExact = false;
+    if (top && qlen <= 2) {
+      var qCode = q.toUpperCase();
+      codeExact = String(top.code).toUpperCase() === qCode;
     }
-    if (matchCountry && matchCountry.code) {
-      selectCountry(matchCountry.code);
+    var isCountry =
+      !!top &&
+      qlen > 1 &&
+      (
+        // full / prefix / alias match (or exact ISO code via 'us' etc.)
+        (top.score >= 1.84) ||
+        // explicit 2-letter country code
+        (codeExact && top.score >= 1.5) ||
+        // longer queries that clearly describe a country (full/prefix/alias)
+        (qlen >= 3 && top.score >= 1.8)
+      );
+    if (isCountry) {
+      // Query clearly identifies a country (name / ISO code / common alias)
+      selectCountry(top.code);
       return;
     }
-    // Search channels and open the country with the most matches
-    var channels = window.ChannelData.channels || [];
-    var isoCounts = {};
-    var any = false;
-    channels.forEach(function (ch) {
-      var text = (ch.name + " " + ch.country + " " + ch.category + " " + (ch.languages || []).join(" ")).toLowerCase();
-      if (text.indexOf(q) !== -1) {
-        any = true;
-        if (!isoCounts[ch.countryCode]) isoCounts[ch.countryCode] = 0;
-        isoCounts[ch.countryCode]++;
-      }
-    });
-    if (any) {
-      var bestISO = Object.keys(isoCounts).sort(function (a, b) { return isoCounts[b] - isoCounts[a]; })[0];
-      if (bestISO) selectCountry(bestISO);
-    }
+    // Otherwise: ranked channel results across the whole catalog
+    openResultsPanel(q);
+  }
+
+  function openResultsPanel(q) {
+    var panel = document.getElementById("globe-panel");
+    if (!panel) return;
+    state.panelOpen = true;
+    renderResultsPanel(q);
+    panel.classList.add("open");
+    syncPanels();
   }
 
   // ---- Init -------------------------------------------------------------
@@ -359,25 +425,39 @@
       });
     }
 
-    // Wire panel search (filters channels within the open country)
+    // Wire panel search (filters within the open country, or within the
+    // current results set) using the ranked, accent-insensitive search.
     var panelSearch = document.getElementById("globe-panel-search");
     if (panelSearch) {
       panelSearch.addEventListener("input", function () {
-        var q = this.value.toLowerCase().trim();
-        var iso = state.selectedISO;
-        if (!iso) return;
-        var all = state.channelsByCountry[iso] || [];
-        if (!q) {
-          renderChannelList(all, document.getElementById("globe-panel-body"));
-          return;
-        }
-        var filtered = all.filter(function (ch) {
-          var text = (ch.name + " " + ch.category + " " + (ch.languages || []).join(" ")).toLowerCase();
-          return text.indexOf(q) !== -1;
+        var q = this.value.trim();
+        var base = state.panelMode === "results"
+          ? state.panelResults
+          : state.channelsByCountry[state.selectedISO] || [];
+        var filtered = q
+          ? window.ChannelData.searchChannels(base, q)
+          : base;
+        var isCountry = state.panelMode !== "results";
+        updatePanel({
+          channels: isCountry ? q ? filtered.slice(0, 250) : filtered : filtered.slice(0, 250),
+          title: isCountry ? countryName(state.selectedISO) : 'Results for "' + (state.panelQuery || "") + '"',
+          countLabel: filtered.length + " channel" + (filtered.length !== 1 ? "s" : ""),
+          placeholder: isCountry
+            ? "Search " + countryName(state.selectedISO) + " channels…"
+            : "Filter results…",
+          keepOrder: !!q
         });
-        renderChannelList(filtered, document.getElementById("globe-panel-body"));
       });
     }
+
+    // Ctrl/Cmd+K focuses the header search
+    document.addEventListener("keydown", function (e) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        var si = document.getElementById("globe-search-input");
+        if (si) { si.focus(); si.select(); }
+      }
+    });
   }
 
   window.TfarrajBrowse = {

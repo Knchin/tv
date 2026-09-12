@@ -268,16 +268,174 @@ function getCategories(channels) {
     .sort((a, b) => b.count - a.count); // Sort by popularity
 }
 
-// Search channels with fuzzy matching
+// ---- Enhanced search (accent-insensitive, tokenized, fuzzy, ranked) ----
+
+// Lowercase + strip diacritics (Ã© -> e, TÃ¼rkiye -> turkiye).
+function normalizeText(text) {
+  return String(text == null ? '' : text)
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function levenshtein(a, b) {
+  if (a === b) return 0;
+  var la = a.length, lb = b.length;
+  if (!la) return lb;
+  if (!lb) return la;
+  var prev = new Array(lb + 1);
+  var curr = new Array(lb + 1);
+  var i, j;
+  for (j = 0; j <= lb; j++) prev[j] = j;
+  for (i = 1; i <= la; i++) {
+    curr[0] = i;
+    for (j = 1; j <= lb; j++) {
+      var cost = a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1;
+      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+    }
+    var t = prev; prev = curr; curr = t;
+  }
+  return prev[lb];
+}
+
+// Score one normalized token against normalized text (1 = exact, 0 = no match).
+// Exact whole-field and prefix wins, then substring, then Levenshtein-tolerant
+// word matching (typos, matching only for tokens of length >= 4).
+function tokenScore(token, text) {
+  if (!token || !text) return 0;
+  if (text === token) return 1;
+  if (text.indexOf(token) === 0) return 0.92;
+  if (text.indexOf(token) !== -1) return 0.85;
+  var best = 0;
+  var words = text.split(/\s+/);
+  for (var i = 0; i < words.length; i++) {
+    var word = words[i];
+    if (!word || word === token) continue;
+    if (token.length >= 4 && Math.abs(word.length - token.length) <= 2) {
+      var d = levenshtein(word, token);
+      if (d <= 1) best = Math.max(best, 0.75);
+      else if (d <= 2 && word.length >= 5) best = Math.max(best, 0.55);
+    }
+  }
+  return best;
+}
+
+// Common alternate spellings / codes for catalog country names.
+var COUNTRY_SEARCH_ALIASES = {
+  'usa': 'United States', 'america': 'United States', 'us': 'United States',
+  'uae': 'UAE', 'ksa': 'Saudi Arabia', 'saudi': 'Saudi Arabia',
+  'uk': 'United Kingdom', 'england': 'United Kingdom', 'britain': 'United Kingdom', 'gb': 'United Kingdom',
+  'turkey': 'Turkiye', 'liban': 'Lebanon', 'misr': 'Egypt', 'maroc': 'Morocco',
+  'magyar': 'Hungary', 'españa': 'Spain', 'espana': 'Spain', 'deutschland': 'Germany',
+  'oesterreich': 'Austria', 'suomi': 'Finland', 'sverige': 'Sweden', 'nederland': 'Netherlands',
+  'belgique': 'Belgium', 'polska': 'Poland', 'schweiz': 'Switzerland', 'helvetia': 'Switzerland',
+  'southkorea': 'South Korea', 'taikorea': 'South Korea', 'sokor': 'South Korea',
+  'palestine': 'Palestine', 'palestina': 'Palestine', 'philippines': 'Philippines',
+  'vietnam': 'Vietnam', 'viet nam': 'Vietnam', 'azeri': 'Azerbaijan',
+  'el salvador': 'El Salvador', 'bosnia': 'Bosnia and Herzegovina',
+  'hongkong': 'Hong Kong', 'south africa': 'South Africa', 'sa': 'South Africa'
+};
+var COUNTRY_ALIAS_NORM = {};
+Object.keys(COUNTRY_SEARCH_ALIASES).forEach(function (key) {
+  COUNTRY_ALIAS_NORM[normalizeText(key)] = normalizeText(COUNTRY_SEARCH_ALIASES[key]);
+});
+
+// Ranked channel search. Returns channels where EVERY query token matches at
+// least one field (name / country / countryCode / category / languages),
+// ordered by relevance (name matches weigh most).
 function searchChannels(channels, query) {
   if (!query || !query.trim()) return channels;
-  
-  const normalizedQuery = query.toLowerCase().trim();
-  const terms = normalizedQuery.split(/\s+/).filter(t => t.length > 0);
-  
-  return channels.filter(channel => {
-    const searchableText = `${channel.name} ${channel.country} ${channel.category} ${channel.languages.join(' ')}`.toLowerCase();
-    return terms.every(term => searchableText.includes(term));
+  var tokens = normalizeText(query).split(/\s+/).filter(function (t) { return t.length > 0; });
+  if (!tokens.length) return channels;
+  var scored = [];
+
+  for (var i = 0; i < channels.length; i++) {
+    var ch = channels[i];
+    var aliasHit = COUNTRY_ALIAS_NORM[tokens.length === 1 ? tokens[0] : ''] || '';
+    var nName = normalizeText(ch.name);
+    var nCur = normalizeText(ch.country);
+    var nCode = normalizeText(ch.countryCode);
+    var nCat = normalizeText(ch.category);
+    var nLang = normalizeText((ch.languages || []).join(' '));
+
+    var total = 0;
+    var matchedAll = true;
+    for (var t = 0; t < tokens.length; t++) {
+      var tok = tokens[t];
+      var best = Math.max(
+        tokenScore(tok, nName) * 3,
+        tokenScore(tok, nCur) * 2,
+        tokenScore(tok, nCode) * 1.2,
+        tokenScore(tok, nCat) * 1,
+        tokenScore(tok, nLang) * 1
+      );
+      // alias country match: token is an alias key and channel.country is the mapped name
+      var alias = COUNTRY_ALIAS_NORM[tok];
+      if (alias && nCur === alias) {
+        best = Math.max(best, 1.8);
+      }
+      if (best === 0) { matchedAll = false; break; }
+      total += best;
+    }
+    if (matchedAll) {
+      scored.push({ channel: ch, score: total });
+    }
+  }
+
+  scored.sort(function (a, b) {
+    if (b.score !== a.score) return b.score - a.score;
+    return a.channel.name.localeCompare(b.channel.name);
+  });
+  return scored.map(function (s) { return s.channel; });
+}
+
+// Ranked country search over the aggregated country list. Matches name,
+// ISO code and common aliases; accent-insensitive.
+function searchCountries(query) {
+  var countries = window.ChannelData && window.ChannelData.countries ? window.ChannelData.countries : [];
+  if (!query || !query.trim()) {
+    return countries.slice().filter(function (c) { return c.code && c.code !== 'XX'; })
+      .sort(function (a, b) { return a.name.localeCompare(b.name); });
+  }
+  var tokens = normalizeText(query).split(/\s+/).filter(function (t) { return t.length > 0; });
+  if (!tokens.length) return countries.slice().sort(function (a, b) { return a.name.localeCompare(b.name); });
+  var scored = [];
+
+  for (var i = 0; i < countries.length; i++) {
+    var c = countries[i];
+    if (c.code === 'XX') continue;
+    if (!normalizeText(c.name)) continue;
+    var total = 0;
+    var matchedAll = true;
+    for (var t = 0; t < tokens.length; t++) {
+      var tok = tokens[t];
+      var nName = normalizeText(c.name);
+      var nCode = normalizeText(c.code);
+      var best = Math.max(
+        tokenScore(tok, nName) * 2,
+        tokenScore(tok, nCode) * 1.5
+      );
+      if (nCode === tok) best = Math.max(best, 2);
+      var alias = COUNTRY_ALIAS_NORM[tok];
+      if (alias && nName === alias) best = Math.max(best, 2);
+      if (best === 0) { matchedAll = false; break; }
+      total += best;
+    }
+    if (matchedAll) scored.push({ country: c, score: total });
+  }
+
+  scored.sort(function (a, b) {
+    if (b.score !== a.score) return b.score - a.score;
+    return b.country.count - a.country.count;
+  });
+  return scored.map(function (s) {
+    var c = s.country;
+    var copy = {};
+    for (var k in c) {
+      if (Object.prototype.hasOwnProperty.call(c, k)) copy[k] = c[k];
+    }
+    copy.score = s.score;
+    return copy;
   });
 }
 
@@ -315,7 +473,9 @@ window.ChannelData = {
   buildChannelData,
   getCountries,
   getCategories,
+  normalizeText,
   searchChannels,
+  searchCountries,
   filterByCountry,
   filterByCategory,
   filterChannels
@@ -336,6 +496,7 @@ function initializeChannelData() {
   window.ChannelData.findBySlug = (slug) => channels.find(c => c.slug === slug);
   window.ChannelData.findById = (id) => channels.find(c => c.id === id);
   window.ChannelData.getAll = () => channels;
+  window.ChannelData.searchAllChannels = (query, base) => searchChannels(base || channels, query);
   
   // Dispatch event to notify that data is ready
   window.dispatchEvent(new CustomEvent('channeldata:ready'));

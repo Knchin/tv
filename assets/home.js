@@ -174,7 +174,9 @@
 
   function renderAllChannels() {
     filteredChannels = window.ChannelData.filterChannels(allChannels, currentFilters);
-    filteredChannels = filteredChannels.slice().sort((a, b) => a.name.localeCompare(b.name));
+    if (!currentFilters.search) {
+      filteredChannels = filteredChannels.slice().sort((a, b) => a.name.localeCompare(b.name));
+    }
     const totalPages = Math.max(1, Math.ceil(filteredChannels.length / PAGE_SIZE));
     if (currentPage > totalPages) currentPage = totalPages;
     if (currentPage < 1) currentPage = 1;
