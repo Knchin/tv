@@ -569,3 +569,59 @@ body {
 .btn-cast:active,
 .btn-copy:active { transform: scale(.96); }
 .btn-copy.copied { background: rgba(34,197,94,.28); border-color: rgba(34,197,94,.6); color: #86efac; }
+
+/* ---------- Audio sync ---------- */
+.sync-wrap { position: relative; display: inline-flex; }
+.btn-audiosync {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; border-radius: 12px;
+  border: 1px solid rgba(120,170,245,.4);
+  background: rgba(22,119,255,.15); color: #9be7ff;
+  cursor: pointer; flex: 0 0 auto;
+  transition: transform .15s, box-shadow .2s, background .18s;
+}
+.btn-audiosync:hover { background: rgba(22,119,255,.28); box-shadow: 0 0 14px rgba(22,119,255,.4); }
+.btn-audiosync:active { transform: scale(.96); }
+.btn-audiosync.active {
+  background: rgba(255,180,60,.16); border-color: rgba(255,193,92,.55); color: #ffd38a;
+  box-shadow: 0 0 14px rgba(255,180,60,.25);
+}
+.sync-badge {
+  position: absolute; top: -6px; right: -6px;
+  min-width: 18px; padding: 1px 5px;
+  border-radius: 9px; font-size: 10px; font-weight: 800;
+  background: #ffb800; color: #0c1a33;
+  text-align: center; pointer-events: none;
+}
+.sync-pop {
+  position: absolute; right: 0; bottom: calc(100% + 10px); z-index: 70;
+  width: 290px; padding: 14px;
+  background: rgba(6,10,24,.97);
+  border: 1px solid rgba(120,170,245,.25);
+  border-radius: 12px;
+  box-shadow: 0 14px 44px rgba(0,0,0,.55);
+  backdrop-filter: blur(24px) saturate(140%);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+}
+.sync-pop[hidden] { display: none; }
+.sync-pop-title { font-size: 14px; font-weight: 800; color: #eef2ff; margin-bottom: 6px; }
+.sync-pop-hint { font-size: 12px; color: #8fa5c7; line-height: 1.45; margin-bottom: 12px; }
+.sync-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.sync-row:first-of-type { margin-top: 0; }
+.sync-row input[type="range"] { flex: 1; accent-color: #1677ff; min-width: 0; }
+.sync-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 7px 10px; border-radius: 9px;
+  border: 1px solid rgba(120,170,245,.35);
+  background: rgba(22,119,255,.12); color: #c3d6f5;
+  cursor: pointer; font-size: 12px; font-weight: 700;
+  transition: background .15s, transform .1s;
+}
+.sync-btn:hover { background: rgba(22,119,255,.26); }
+.sync-btn:active { transform: scale(.95); }
+.sync-btn.sync-reset { min-width: 62px; }
+.sync-val {
+  margin-left: auto; font-size: 13px; font-weight: 800; color: #9be7ff;
+  font-variant-numeric: tabular-nums;
+}
+.sync-meta { justify-content: space-between; }

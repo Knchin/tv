@@ -18,6 +18,30 @@
 
   var LB2_STREAM_URL = "/api/stream?channel=lb2";
 
+  var SYNC_SVG = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>';
+
+  // Audio-sync control markup (delay audio to match the picture).
+  function buildSyncMarkup() {
+    return '<span class="sync-wrap">'
+      + '<button type="button" class="btn-audiosync" aria-label="Audio sync" aria-expanded="false" title="Audio sync">'
+      +   SYNC_SVG + '<span class="sync-badge" hidden></span>'
+      + '</button>'
+      + '<div class="sync-pop" hidden>'
+      +   '<div class="sync-pop-title">Audio sync</div>'
+      +   '<div class="sync-pop-hint">Adds delay to the audio so it lines up with the picture. Use it when the sound seems to arrive before what you see on screen.</div>'
+      +   '<div class="sync-row">'
+      +     '<button type="button" class="sync-btn" data-step="-100" aria-label="Reduce audio delay">\u2212100</button>'
+      +     '<input type="range" min="0" max="5000" step="50" value="0" aria-label="Audio delay in milliseconds">'
+      +     '<button type="button" class="sync-btn" data-step="100" aria-label="Increase audio delay">+100</button>'
+      +   '</div>'
+      +   '<div class="sync-row sync-meta">'
+      +     '<button type="button" class="sync-btn sync-reset">Reset</button>'
+      +     '<span class="sync-val">0 ms</span>'
+      +   '</div>'
+      + '</div>'
+      + '</span>';
+  }
+
   function buildPlayerDOM(container, channel) {
     container.innerHTML = "";
 
@@ -48,6 +72,7 @@
       '<button class="btn-refresh" id="btn-refresh" aria-label="Refresh stream token" title="Refresh stream token"><span class="ico">🗘</span><span class="spin-sm"></span></button>' +
       '<button class="btn-copy" id="btn-copy" aria-label="Copy stream URL" title="Copy stream URL"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>' +
       '<button class="btn-cast" id="btn-cast" aria-label="Cast to device" title="Cast to TV or monitor"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 9.95 20M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"></path><line x1="2" y1="20" x2="2.01" y2="20"></line></svg></button>' +
+      buildSyncMarkup() +
       '<button class="btn-fullscreen" id="btn-fullscreen" aria-label="Fullscreen"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"></path></svg></button>';
 
     wrap.appendChild(title);
@@ -58,6 +83,7 @@
 
     return {
       player: player,
+      actions: actions,
       vid: wrap.querySelector("#vid"),
       btn: wrap.querySelector("#btn-refresh"),
       errSub: wrap.querySelector("#err-sub"),
@@ -66,7 +92,8 @@
       ovlError: wrap.querySelector("#ovl-error"),
       btnCopy: wrap.querySelector("#btn-copy"),
       btnCast: wrap.querySelector("#btn-cast"),
-      btnFullscreen: wrap.querySelector("#btn-fullscreen")
+      btnFullscreen: wrap.querySelector("#btn-fullscreen"),
+      syncWrap: wrap.querySelector(".sync-wrap")
     };
   }
 
@@ -87,6 +114,175 @@
     var hls = null;
     var userActivated = false;
     var youtubeIframe = null;
+    var audioSync = null;
+    var audioCtx = null;
+    var audioSrcNode = null;
+    var audioDelayNode = null;
+    var audioOffsetMill = 0;
+
+    // ---- Audio sync (delay audio relative to video) -------------------
+    // Routes the element's audio through a WebAudio DelayNode. This is safe
+    // only for same-origin or hls.js/MSE ("blob:") media which is CORS-clean;
+    // native HLS cross-origin media would be tainted and go silent, so the
+    // control is hidden for that path (Safari).
+
+    function audioGraphBegin() {
+      if (!audioSync || !audioSync.eligible) return false;
+      if (audioCtx) {
+        if (audioCtx.state === "suspended" && audioCtx.resume) audioCtx.resume();
+        return true;
+      }
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC || !AC.prototype || !AC.prototype.createMediaElementSource) return false;
+      audioCtx = new AC();
+      audioSrcNode = audioCtx.createMediaElementSource(vid);
+      audioDelayNode = audioCtx.createDelay(6);
+      audioSrcNode.connect(audioDelayNode);
+      audioDelayNode.connect(audioCtx.destination);
+      audioDelayNode.delayTime.value = audioOffsetMill / 1000;
+      return true;
+    }
+
+    function audioGraphEnd() {
+      if (audioCtx) {
+        try { audioCtx.close(); } catch (e) {}
+      }
+      audioCtx = null;
+      audioSrcNode = null;
+      audioDelayNode = null;
+    }
+
+    function applyAudioOffset(ms) {
+      if (!audioSync || !audioSync.eligible) return;
+      ms = Math.max(0, Math.min(5000, Math.round(ms / 50) * 50));
+      audioOffsetMill = ms;
+      if (ms > 0) {
+        if (audioGraphBegin() && audioDelayNode) audioDelayNode.delayTime.value = ms / 1000;
+      } else if (audioDelayNode) {
+        audioDelayNode.delayTime.value = 0;
+      }
+    }
+
+    function initAudioSync() {
+      var wrap = els.syncWrap;
+      if (!wrap) {
+        // Player pages ship the actions row statically; inject the control.
+        if (els.actions) {
+          els.actions.insertAdjacentHTML("beforeend", buildSyncMarkup());
+          var all = els.actions.querySelectorAll(".sync-wrap");
+          wrap = all[all.length - 1];
+        }
+      }
+      if (!wrap) return;
+
+      var btn = wrap.querySelector(".btn-audiosync");
+      var pop = wrap.querySelector(".sync-pop");
+      var slider = wrap.querySelector('input[type="range"]');
+      var valEl = wrap.querySelector(".sync-val");
+      var badge = wrap.querySelector(".sync-badge");
+      var resetBtn = wrap.querySelector(".sync-reset");
+      if (!btn || !pop || !slider || !valEl || !badge) return;
+
+      var sameOrigin = !!(channel && channel.url && channel.url.charAt(0) === "/");
+      var nativePath = !!(vid && vid.canPlayType && vid.canPlayType("application/vnd.apple.mpegurl"));
+      var hlsPath = !nativePath && !!(window.Hls && Hls.isSupported());
+      var eligible = channelType !== "youtube" && (sameOrigin || hlsPath);
+
+      audioSync = { eligible: eligible, pop: pop, btn: btn };
+
+      var saved = 0;
+      if (channel && channel.id) {
+        try { saved = parseInt(localStorage.getItem("tfarraj-async:" + channel.id) || "0", 10) || 0; } catch (e) { saved = 0; }
+      }
+      audioOffsetMill = Math.max(0, Math.min(5000, Math.round(saved / 50) * 50));
+
+      if (!eligible) {
+        wrap.hidden = true;
+        return;
+      }
+
+      function refreshView() {
+        slider.value = String(audioOffsetMill);
+        valEl.textContent = audioOffsetMill === 0 ? "0 ms" : "+" + audioOffsetMill + " ms";
+        btn.classList.toggle("active", audioOffsetMill !== 0);
+        btn.title = "Audio sync" + (audioOffsetMill ? " (" + valEl.textContent + ")" : "");
+        var showBadge = audioOffsetMill !== 0;
+        badge.hidden = !showBadge;
+        badge.textContent = showBadge
+          ? "+" + (audioOffsetMill >= 1000
+              ? (audioOffsetMill / 1000).toFixed(1).replace(/\.0$/, "") + "s"
+              : audioOffsetMill + "ms")
+          : "";
+      }
+
+      function setOpen(show) {
+        pop.hidden = !show;
+        btn.setAttribute("aria-expanded", String(!!show));
+      }
+
+      function commit(ms) {
+        ms = Math.max(0, Math.min(5000, Math.round(ms / 50) * 50));
+        applyAudioOffset(ms);
+        refreshView();
+        if (channel && channel.id) {
+          try { localStorage.setItem("tfarraj-async:" + channel.id, String(ms)); } catch (e) {}
+        }
+      }
+
+      if (audioOffsetMill > 0) applyAudioOffset(audioOffsetMill);
+      refreshView();
+
+      btn.addEventListener("click", function () {
+        setOpen(pop.hidden);
+      });
+
+      var stepBtns = wrap.querySelectorAll(".sync-btn[data-step]");
+      Array.prototype.forEach.call(stepBtns, function (b) {
+        b.addEventListener("click", function () {
+          commit(audioOffsetMill + parseInt(b.getAttribute("data-step"), 10));
+        });
+      });
+
+      if (resetBtn) {
+        resetBtn.addEventListener("click", function () {
+          commit(0);
+        });
+      }
+
+      slider.addEventListener("input", function () {
+        commit(parseInt(this.value, 10) || 0);
+      });
+
+      // AudioContexts are created suspended until the visitor interacts with
+      // the page (autoplay policy); resume the routing graph on the first
+      // gesture so the delayed audio actually reaches the speakers.
+      var resumeEvents = ["pointerdown", "keydown", "touchstart"];
+      function ensureResume() {
+        if (audioCtx && audioCtx.state === "suspended" && audioCtx.resume) {
+          try { audioCtx.resume(); } catch (e) {}
+        }
+      }
+      resumeEvents.forEach(function (ev) {
+        document.addEventListener(ev, ensureResume);
+      });
+
+      function onDocKey(e) {
+        if (e.key === "Escape") setOpen(false);
+      }
+      function onDocClick(e) {
+        if (!pop.hidden && !btn.contains(e.target) && !pop.contains(e.target)) setOpen(false);
+      }
+      document.addEventListener("keydown", onDocKey);
+      document.addEventListener("click", onDocClick);
+
+      audioSync._cleanup = function () {
+        resumeEvents.forEach(function (ev) {
+          document.removeEventListener(ev, ensureResume);
+        });
+        document.removeEventListener("keydown", onDocKey);
+        document.removeEventListener("click", onDocClick);
+      };
+    }
 
     function overlays(show) {
       ovlLoading.hidden = show !== "loading";
@@ -358,15 +554,36 @@
     }
 
     // Autoplay to start (will show tap overlay if blocked).
+    initAudioSync();
     play(DEFAULT_URL);
+
+    function destroy() {
+      audioGraphEnd();
+      if (audioSync && audioSync._cleanup) audioSync._cleanup();
+      if (hls) {
+        try { hls.destroy(); } catch (e) {}
+        hls = null;
+      }
+      if (vid) {
+        try { vid.pause(); } catch (e) {}
+        vid.removeAttribute("src");
+        try { vid.load(); } catch (e) {}
+      }
+    }
+
+    return { destroy: destroy };
   }
 
   // In-page mounting API (browse page).
   window.TfarrajPlayer = {
     mount: function (container, channel) {
       if (!container) return;
+      if (container.__tfarrajPlayer && container.__tfarrajPlayer.destroy) {
+        try { container.__tfarrajPlayer.destroy(); } catch (e) {}
+      }
       var els = buildPlayerDOM(container, channel);
-      createPlayer(els, channel);
+      var player = createPlayer(els, channel);
+      container.__tfarrajPlayer = player;
     }
   };
 
@@ -375,6 +592,7 @@
     if (!window.ACTIVE_CHANNEL) return;
     var els = {
       player: document.querySelector(".player"),
+      actions: document.querySelector(".player-actions"),
       vid: document.getElementById("vid"),
       btn: document.getElementById("btn-refresh"),
       errSub: document.getElementById("err-sub"),
@@ -383,7 +601,8 @@
       ovlError: document.getElementById("ovl-error"),
       btnCopy: document.getElementById("btn-copy"),
       btnCast: document.getElementById("btn-cast"),
-      btnFullscreen: document.getElementById("btn-fullscreen")
+      btnFullscreen: document.getElementById("btn-fullscreen"),
+      syncWrap: null
     };
     // Don't double-init when the player was mounted dynamically on this page.
     if (!els.vid) return;
