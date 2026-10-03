@@ -186,9 +186,10 @@
       var sameOrigin = !!(channel && channel.url && channel.url.charAt(0) === "/");
       var nativePath = !!(vid && vid.canPlayType && vid.canPlayType("application/vnd.apple.mpegurl"));
       var hlsPath = !nativePath && !!(window.Hls && Hls.isSupported());
-      var eligible = channelType !== "youtube" && (sameOrigin || hlsPath);
+      var isYouTube = channelType === "youtube";
+      var graphSafe = sameOrigin || hlsPath;
 
-      audioSync = { eligible: eligible, pop: pop, btn: btn };
+      audioSync = { eligible: graphSafe && !isYouTube, pop: pop, btn: btn };
 
       var saved = 0;
       if (channel && channel.id) {
@@ -196,9 +197,25 @@
       }
       audioOffsetMill = Math.max(0, Math.min(5000, Math.round(saved / 50) * 50));
 
-      if (!eligible) {
+      // YouTube embeds have no playable native <video> element to route through
+      // WebAudio, so the sync control is pointless there and we hide it. Every
+      // other channel keeps the button visible; if this browser cannot route the
+      // audio (native HLS served from another origin), the popover explains it
+      // instead of disabling playback silently.
+      if (isYouTube) {
         wrap.hidden = true;
         return;
+      }
+
+      if (!audioSync.eligible) {
+        audioOffsetMill = 0;
+        btn.title = "Audio sync is not available for this stream in this browser";
+        var hint = pop.querySelector(".sync-pop-hint");
+        if (hint) {
+          hint.textContent = "This browser plays the stream without WebAudio support here, so the audio can't be delayed. Open this channel in Chrome/Edge/Android for the sync control.";
+        }
+        slider.disabled = true;
+        if (resetBtn) resetBtn.disabled = true;
       }
 
       function refreshView() {
@@ -221,6 +238,7 @@
       }
 
       function commit(ms) {
+        if (!audioSync || !audioSync.eligible) return;
         ms = Math.max(0, Math.min(5000, Math.round(ms / 50) * 50));
         applyAudioOffset(ms);
         refreshView();
