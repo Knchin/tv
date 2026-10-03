@@ -33,6 +33,14 @@ async function mint() {
   if (i === -1) throw new Error("Could not read csrf-token from page");
   const csrf = html.slice(i + marker.length).split('"')[0];
 
+  // elahmad.ru ties the csrf token to the PHP session it creates on the page
+  // request; the result POST must echo that session cookie or the server
+  // answers {"error":"Invalid Token Error elahmad.ru"}.
+  const cookie = pageRes.headers
+    .getSetCookie()
+    .map((c) => c.split(";")[0])
+    .join("; ");
+
   const resultRes = await fetch(RESULT, {
     method: "POST",
     headers: {
@@ -41,6 +49,7 @@ async function mint() {
       Origin: BASE,
       "Content-Type": "application/x-www-form-urlencoded",
       "X-Requested-With": "XMLHttpRequest",
+      Cookie: cookie,
     },
     body: "id=lb2&csrf_token=" + encodeURIComponent(csrf),
   });
