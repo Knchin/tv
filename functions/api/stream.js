@@ -1,20 +1,22 @@
 // LB2 HLS streaming proxy for Cloudflare Pages Functions.
 //
-// games1.elahmad.store binds its playback tokens to the IP that minted them.
-// A token minted from a GitHub runner or a Cloudflare function is therefore
-// useless in a visitor's browser — the media server returns 403 to any other
-// IP. The only token that can play is one minted from the SAME egress IP that
-// requests the playlist/segments.
+// games1.elahmad.store serves elahmad's LB2 feed. Elahmad only hands out real
+// playback tokens to residential IPs: datacenter networks (GitHub runners,
+// Cloudflare egress, CI boxes) get a static placeholder instead, so the mint
+// can NOT happen from this function's own network.
 //
-// So instead of handing the minted URL to the browser, this function keeps
-// the whole HLS fetch on ONE side — its own egress IP:
-//   1. Mint a token here (bound to this function's egress IP).
-//   2. Fetch the master playlist, rewrite every variant/segment URL to point
-//      back at this same function (/api/stream?channel=lb2&a=...&url=<upstream>).
-//   3. For each proxied request, fetch the upstream resource (works, because
-//      it is the same IP that minted the token) and stream it through.
-// The browser only ever talks to the same-origin function endpoint, so no
-// CORS headers are required and no IP trust is placed in the visitor.
+// Strategy:
+//   1. Prefer the COMMITTED token URL (assets/channels_canonical.json, from
+//      the same deployment). It is re-minted on a residential machine by
+//      scripts/mint-home.sh and pushed to main.
+//   2. Fall back to a fresh server-side mint only when there is no committed
+//      URL (in practice that mint returns the placeholder -> clean 503).
+//   3. Proxy the whole HLS fetch on ONE side — this function's egress:
+//      fetch the upstream master/variants/segments and rewrite every URI to
+//      point back at /api/stream. Segment/variant requests never mint again.
+//
+// The browser only ever talks to this same-origin endpoint, so no CORS
+// headers are required and no IP trust is placed in the visitor.
 
 const CHANNEL = "lb2";
 const SOURCE = {
@@ -24,6 +26,9 @@ const SOURCE = {
 };
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
+const CATALOG_URL = "/assets/channels_canonical.json";
+const CATALOG_TTL_MS = 120000;
 
 const HLS_HEADERS = {
   "Content-Type": "application/vnd.apple.mpegurl; charset=utf-8",
@@ -35,6 +40,8 @@ const BIN_HEADERS = {
   "Cache-Control": "no-store, max-age=0",
 };
 
+let catalogCache = { at: 0, lb2Url: null };
+
 export async function onRequest(context) {
   const u = new URL(context.request.url);
   const a = u.searchParams.get("a") || "playlist";
@@ -42,33 +49,111 @@ export async function onRequest(context) {
   const self = u.origin + "/api/stream";
 
   try {
-    const { master } = await mintTokenUrl();
+    // Variant / segment / key requests carry an absolute upstream URL and just
+    // proxy it. Never mint here — a fresh mint from Cloudflare egress yields
+    // the elahmad placeholder and would kill playback for every fragment.
+    if (relUrl) return await serveUpstream(relUrl, a, self);
 
-    if (a === "seg") {
-      if (!relUrl || !allowed(relUrl)) return text("Bad segment URL", 400);
-      const r = await fetch(relUrl, { headers: { "User-Agent": UA } });
-      const ct = r.headers.get("content-type") || "video/MP2T";
-      return new Response(r.body, {
-        status: r.status,
-        headers: Object.assign({ "Content-Type": ct }, BIN_HEADERS),
-      });
-    }
+    // Root playlist (no url param): resolve the master from the committed
+    // token first, fresh server-side mint only as a fallback.
+    const master = await resolveMaster(u.origin);
+    return await servePlaylist(master, self);
+  } catch (e) {
+    return text("Proxy error: " + String((e && e.message) || e), e && e.isOffline ? 503 : 500);
+  }
+}
 
-    const target = relUrl || master;
-    if (!allowed(target)) return text("Bad playlist URL", 400);
-    const r = await fetch(target, { headers: { "User-Agent": UA } });
-    if (!r.ok) return text("Upstream " + target.split("/")[2] + ": " + r.status, 502);
+async function serveUpstream(relUrl, a, self) {
+  if (!allowed(relUrl)) return text("Bad URL", 400);
+  const r = await fetch(relUrl, { headers: { "User-Agent": UA } });
+  if (isPlaylistUrl(relUrl)) {
+    if (!r.ok) return text("Upstream " + relUrl.split("/")[2] + ": " + r.status, 502);
     const body = await r.text();
-    // Relative URIs inside a playlist resolve against THAT playlist's own
-    // directory (the variant lives in tracks-v1a1/, the master at the root).
-    const baseDir = target.slice(0, target.lastIndexOf("/") + 1);
+    const baseDir = relUrl.slice(0, relUrl.lastIndexOf("/") + 1);
     return new Response(rewritePlaylist(body, baseDir, self), {
       status: 200,
       headers: HLS_HEADERS,
     });
-  } catch (e) {
-    return text("Proxy error: " + String((e && e.message) || e), e && e.isOffline ? 503 : 500);
   }
+  const ct = r.headers.get("content-type") || "video/MP2T";
+  return new Response(r.body, {
+    status: r.status,
+    headers: Object.assign({ "Content-Type": ct }, BIN_HEADERS),
+  });
+}
+
+async function servePlaylist(master, self) {
+  if (!allowed(master)) return text("Bad playlist URL", 400);
+  const r = await fetch(master, { headers: { "User-Agent": UA } });
+  if (!r.ok) return text("Upstream " + master.split("/")[2] + ": " + r.status, 502);
+  const body = await r.text();
+  // Relative URIs inside a playlist resolve against THAT playlist's own
+  // directory (the variant lives in tracks-v1a1/, the master at the root).
+  const baseDir = master.slice(0, master.lastIndexOf("/") + 1);
+  return new Response(rewritePlaylist(body, baseDir, self), {
+    status: 200,
+    headers: HLS_HEADERS,
+  });
+}
+
+// Prefer the committed URL; a fresh server-side mint is only a fallback.
+async function resolveMaster(origin) {
+  const committed = await getCommittedToken(origin);
+  if (committed) {
+    if (isUnexpired(committed)) return committed;
+    const err = new Error(
+      "LB2 stream token has expired; it must be refreshed from a residential network to resume playback."
+    );
+    err.isOffline = true;
+    throw err;
+  }
+  const minted = await mintTokenUrl();
+  return minted.master;
+}
+
+// Read the committed LB2 URL from the same deployment's channel catalog,
+// cached briefly to avoid hammering the static asset on every root request.
+async function getCommittedToken(origin) {
+  const now = Date.now();
+  if (now - catalogCache.at < CATALOG_TTL_MS) return catalogCache.lb2Url;
+  try {
+    let lb2Url = null;
+    const res = await fetch(origin + CATALOG_URL);
+    if (res.ok) {
+      const channels = await res.json();
+      for (const ch of channels) {
+        if (ch && ch.id === CHANNEL && ch.url) {
+          lb2Url = ch.url;
+          break;
+        }
+      }
+    }
+    catalogCache = { at: now, lb2Url };
+  } catch (e) {
+    catalogCache = { at: now, lb2Url: null };
+  }
+  return catalogCache.lb2Url;
+}
+
+function tokenExpiry(u) {
+  try {
+    const parts = new URL(u).searchParams.get("token");
+    if (!parts) return null;
+    const exp = Number(parts.split("-")[parts.split("-").length - 2]);
+    return Number.isFinite(exp) ? exp : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function isUnexpired(u) {
+  const exp = tokenExpiry(u);
+  if (exp === null) return true;
+  return exp * 1000 > Date.now();
+}
+
+function isPlaylistUrl(u) {
+  return /\.m3u8([?#]|$)/i.test(u);
 }
 
 function rewritePlaylist(text, baseDir, self) {
@@ -89,7 +174,7 @@ function rewritePlaylist(text, baseDir, self) {
       continue;
     }
     const abs = resolve(l.trim(), baseDir);
-    const kind = /\.m3u8([?#]|$)/i.test(abs) ? (abs.includes("?") ? "playlist" : "playlist") : "seg";
+    const kind = isPlaylistUrl(abs) ? "playlist" : "seg";
     out.push(self + "?channel=" + CHANNEL + "&a=" + kind + "&url=" + encodeURIComponent(abs));
   }
   return out.join("\n");
@@ -99,7 +184,7 @@ function rewritePlaylist(text, baseDir, self) {
 // Variant playlists are requested back as playlists (so hls.js follows them),
 // plain segment/other URIs are requested as binary segments.
 function playUrl(self, abs) {
-  const kind = /\.m3u8([?#]|$)/i.test(abs) ? "playlist" : "seg";
+  const kind = isPlaylistUrl(abs) ? "playlist" : "seg";
   return self + "?channel=" + CHANNEL + "&a=" + kind + "&url=" + encodeURIComponent(abs);
 }
 
@@ -136,7 +221,7 @@ function isDecoy(u) {
 
 // Mint a fresh token from this function's egress IP. The token it returns is
 // bound to THIS IP, which is exactly what we need since all upstream fetches
-// also leave from this same IP. Returns { master, token }.
+// also leave from this same IP. Returns { master }.
 async function mintTokenUrl() {
   const pageRes = await fetch(SOURCE.page, {
     headers: { "User-Agent": UA, Referer: "https://www.elahmad.ru/" },

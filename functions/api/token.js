@@ -15,6 +15,18 @@ export async function onRequest(context) {
     return json({ url: null, error: "No token source for this channel" }, 200);
   }
 
+  // Prefer the committed (home-minted) token while it is still valid. It was
+  // obtained from a residential IP, which is the only network elahmad.ru
+  // gives a real LB2 stream to (Cloudflare egress gets a placeholder).
+  try {
+    const committed = await getCommittedToken(url.origin, id);
+    if (committed && isUnexpired(committed)) {
+      return json({ url: committed, channel: id });
+    }
+  } catch (e) {
+    // fall through to a fresh server-side mint
+  }
+
   const UA =
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
@@ -87,6 +99,34 @@ function json(obj, status) {
     status: status || 200,
     headers: { "Content-Type": "application/json" },
   });
+}
+
+// Read the committed URL for a channel from the same deployment's catalog.
+async function getCommittedToken(origin, id) {
+  const res = await fetch(origin + "/assets/channels_canonical.json");
+  if (!res.ok) return null;
+  const channels = await res.json();
+  for (const ch of channels) {
+    if (ch && ch.id === id && ch.url) return ch.url;
+  }
+  return null;
+}
+
+function tokenExpiry(u) {
+  try {
+    const parts = new URL(u).searchParams.get("token");
+    if (!parts) return null;
+    const exp = Number(parts.split("-")[parts.split("-").length - 2]);
+    return Number.isFinite(exp) ? exp : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function isUnexpired(u) {
+  const exp = tokenExpiry(u);
+  if (exp === null) return true;
+  return exp * 1000 > Date.now();
 }
 
 // Detect the placeholder/canary URL elahmad.ru hands automated clients.
