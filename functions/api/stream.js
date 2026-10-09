@@ -67,7 +67,7 @@ export async function onRequest(context) {
       headers: HLS_HEADERS,
     });
   } catch (e) {
-    return text("Proxy error: " + String((e && e.message) || e), 500);
+    return text("Proxy error: " + String((e && e.message) || e), e && e.isOffline ? 503 : 500);
   }
 }
 
@@ -123,6 +123,17 @@ function allowed(target) {
   return /^(https?:\/\/)?games1\.elahmad\.store\//.test(target);
 }
 
+// Detect the placeholder/canary URL elahmad.ru hands automated (datacenter)
+// clients. If minted, LB2 is effectively offline for this network right now.
+function isDecoy(u) {
+  try {
+    const host = new URL(u).hostname.toLowerCase();
+    return host === "raw.githubusercontent.com" || /\.githubusercontent\.com$/.test(host);
+  } catch (e) {
+    return false;
+  }
+}
+
 // Mint a fresh token from this function's egress IP. The token it returns is
 // bound to THIS IP, which is exactly what we need since all upstream fetches
 // also leave from this same IP. Returns { master, token }.
@@ -136,6 +147,11 @@ async function mintTokenUrl() {
   if (i === -1) throw new Error("Could not read csrf-token from page");
   const csrf = html.slice(i + marker.length).split('"')[0];
 
+  // elahmad.ru ties the csrf token to the PHP session it creates on the page
+  // request; the mint POST must echo that session cookie or the server answers
+  // {"error":"Invalid Token Error elahmad.ru"}.
+  const cookie = (pageRes.headers.get("set-cookie") || "").split(";")[0];
+
   const resultRes = await fetch(SOURCE.result, {
     method: "POST",
     headers: {
@@ -144,6 +160,7 @@ async function mintTokenUrl() {
       Origin: "https://www.elahmad.ru",
       "Content-Type": "application/x-www-form-urlencoded",
       "X-Requested-With": "XMLHttpRequest",
+      Cookie: cookie,
     },
     body: SOURCE.post + "&csrf_token=" + encodeURIComponent(csrf),
   });
@@ -169,6 +186,13 @@ async function mintTokenUrl() {
     .decode(plain)
     .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]+$/, "");
   if (!/^https:\/\//.test(master)) throw new Error("Minted URL is not HTTP(S)");
+  if (isDecoy(master)) {
+    const err = new Error(
+      "elahmad is serving a placeholder stream for this network right now; LB2 is temporarily unavailable."
+    );
+    err.isOffline = true;
+    throw err;
+  }
   return { master };
 }
 

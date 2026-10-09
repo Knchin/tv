@@ -65,8 +65,26 @@ async function mint() {
   return url;
 }
 
+// The placeholder/canary master elahmad.ru hands datacenter clients when it
+// refuses them the real LB2 stream. Never commit/play it.
+function isDecoy(url) {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return host === "raw.githubusercontent.com" || /\.githubusercontent\.com$/.test(host);
+  } catch (e) {
+    return false;
+  }
+}
+
 async function main() {
   const url = await mint();
+  // elahmad sometimes answers automated networks with a static placeholder
+  // rather than the live channel. Skip silently so CI stays green and the
+  // canary URL never lands in the catalog.
+  if (isDecoy(url)) {
+    console.log("SKIP: elahmad served a placeholder for this network; not updating the token.");
+    return false;
+  }
   // Verify the new URL really serves an HLS playlist BEFORE writing anything,
   // so a dead/403 token (e.g. from a datacenter egress IP) is never committed.
   const check = await fetch(url);

@@ -420,6 +420,12 @@
         hls.on(Hls.Events.ERROR, function (evt, data) {
           if (!data.fatal) return;
           if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+            // A 503 from /api/stream means the upstream channel (LB2) is
+            // temporarily unavailable at the source; don't retry forever.
+            if (data.response && data.response.status === 503) {
+              showStreamError();
+              return;
+            }
             hls.startLoad();
           } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
             hls.recoverMediaError();

@@ -31,6 +31,10 @@ export async function onRequest(context) {
     }
     const csrf = html.slice(i + marker.length).split('"')[0];
 
+    // The csrf token is bound to the PHP session elahmad.ru created on the
+    // page request; echo its cookie or the server rejects the token.
+    const cookie = (pageRes.headers.get("set-cookie") || "").split(";")[0];
+
     const resultRes = await fetch(source.result, {
       method: "POST",
       headers: {
@@ -39,6 +43,7 @@ export async function onRequest(context) {
         Origin: "https://www.elahmad.ru",
         "Content-Type": "application/x-www-form-urlencoded",
         "X-Requested-With": "XMLHttpRequest",
+        Cookie: cookie,
       },
       body: source.post + "&csrf_token=" + encodeURIComponent(csrf),
     });
@@ -48,6 +53,9 @@ export async function onRequest(context) {
     }
 
     const tokenUrl = await decrypt(data);
+    if (isDecoy(tokenUrl)) {
+      return json({ url: null, error: "Stream temporarily unavailable for this network" }, 503);
+    }
     return json({ url: tokenUrl, channel: id });
   } catch (e) {
     return json({ url: null, error: String(e && e.message ? e.message : e) }, 500);
@@ -79,6 +87,16 @@ function json(obj, status) {
     status: status || 200,
     headers: { "Content-Type": "application/json" },
   });
+}
+
+// Detect the placeholder/canary URL elahmad.ru hands automated clients.
+function isDecoy(u) {
+  try {
+    const host = new URL(u).hostname.toLowerCase();
+    return host === "raw.githubusercontent.com" || /\.githubusercontent\.com$/.test(host);
+  } catch (e) {
+    return false;
+  }
 }
 
 function base64ToBytes(b64) {
